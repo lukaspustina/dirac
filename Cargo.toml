@@ -1,0 +1,22 @@
+[package]
+name = "duck_checker"
+version = "0.0.1"
+authors = ["Lukas Pustina <lukas@pustina.net>"]
+
+[[bin]]
+name = "duck_check"
+path = "src/main.rs"
+
+[dependencies]
+clap = "2"
+env_logger = "0.3"
+hyper = "0.8.0"
+log = "0.3"
+regex = "0.1.58"
+yaml-rust = "0.3.2"
+
+[dependencies.cpython]
+git = "https://github.com/dgrunwald/rust-cpython.git"
+#default-features = false
+#python27-sys = []
+
