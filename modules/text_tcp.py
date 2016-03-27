@@ -1,6 +1,6 @@
-from duck import Duck;
+from duck import Duck
 
 class Module(Duck):
 
-    _module_protocol = "text/tcp";
+    _module_protocol = "text/tcp"
 
