@@ -120,11 +120,17 @@ fn main() {
     let version: String = sys.get(py, "version").unwrap().extract(py).unwrap();
     println!("* Running Pythion '{}'.", version);
 
-    let mut params = Kwargs::new();
-    params.insert("port", "22");
-    params.insert("version", "2.0");
-    params.insert("software", "OpenSSH.*");
-    execute_module(py, "esel.fritz.box", "ssh", &params);
+    for duck_check in duck_checks {
+        for property in duck_check.properties {
+            let mut params = Kwargs::new();
+            for kv in property.params {
+                params.insert(&kv.0, &kv.1);
+            }
+            for host in duck_check.hosts {
+                execute_module(py, host, "ssh", &params);
+            }
+        }
+    }
 
     // clear; cargo build && cp target/debug/duck_check . && PYTHONPATH=modules ./duck_check
 }
