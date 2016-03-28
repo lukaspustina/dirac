@@ -1,29 +1,13 @@
 # vim: set ft=yaml:
 ---
-- groups:
-    esel:
-      - esel.fritz.box
+- inventory:
     raspi:
       - heimbot.fritz.box
-
-- hosts: servers
-  properties:
-    - name: Checking SSH
-      ssh: port=22 version=2.0 software="openssh.*"
-    - name: Checking SSH
-      ssh:
-        port: 22
-        version: 2.0
-        software: "openssh.*"
-    - name: Checking SSH
-      ssh: { port: 22, version: 2.0, software: "openssh.*" }
-    - name: Checking Synology UI
-      http: port=5000 version=1.1 server=ngnix response_code=400 content_type="text/html" resonse_body=".*Bad Request.*"
-    - name: Checking Synology UI
-      https: port=5000 version=1.1 tls_version=1.2 server=ngnix server_certificate="PDT Root CA" response_code=200 content_type="text/html" resonse_body=".*SYNO.*"
+    esel:
+      - esel.fritz.box
 
 - hosts: raspi
   properties:
     - name: Checking SSH
-      ssh: port=22 version=2.0 software="openssh.*"
+      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
 
