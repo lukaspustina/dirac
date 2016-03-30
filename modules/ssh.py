@@ -6,19 +6,13 @@ import re
 class Module(text_tcp.Module):
 
     @classmethod
-    def check_args(cls, **kwargs):
-        if not 'port' in kwargs: raise MissingArgumentError('port')
-        port = kwargs['port']
+    def check_args(cls, port, version, software):
         try:
             n = int(port)
             if n < 1 or n > 0xFFFF: raise ValueError()
         except ValueError as err:
             raise InvalidArgumentError('port', port, "is not a vaild port number")
 
-        if not 'version' in kwargs: raise MissingArgumentError('version')
-
-        if not 'software' in kwargs: raise MissingArgumentError('software')
-        software = kwargs['software']
         try:
             re.compile(software)
         except re.error:
@@ -26,15 +20,12 @@ class Module(text_tcp.Module):
 
         return True
 
-    def __init__(self, **kwargs):
-        self.port = kwargs['port']
-        self.version = kwargs['version']
-        self.software = re.compile(kwargs['software'])
+    def __init__(self, port, version, software):
+        self.port = port
+        self.version = version
+        self.software = re.compile(software)
 
-    def check_response(self, **kwargs):
-        if not 'response' in kwargs: raise MissingArgumentError('response')
-        response = kwargs['response']
-
+    def check_response(self, response):
         try:
             # cf. https://tools.ietf.org/html/rfc4253#section-4.2
             (ssh, version, software) = response.strip().split(' ')[0].split('-', 2)

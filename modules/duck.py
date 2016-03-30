@@ -36,15 +36,6 @@ class InvalidArgumentError(Error):
         return "%s: %s%s" % (repr(self.argument), repr(self.value), " %s" if reason else "")
 
 
-class MissingArgumentError(Error):
-
-    def __init__(self, argument):
-        self.argument = argument
-
-    def __str__(self):
-        return "%s" % repr(self.argument)
-
-
 class ResponeCheckError(Error):
 
     def __init__(self, message):
