@@ -8,6 +8,23 @@
 
 - hosts: raspi
   properties:
-    - name: Checking SSH
+    - name: Check SSH
       ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
+    - name: Check HTTP Redirect to HTTPS
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 301
+
+- hosts: esel
+  properties:
+    - name: Check SSH
+      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
+    - name: Check HTTP Redirect to HTTPS
+      http:
+        port: 5000
+        verb: GET
+        uri: /
+        response_code: 302
 

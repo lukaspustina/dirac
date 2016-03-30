@@ -34,8 +34,6 @@ class Module(text_tcp.Module):
             if self.software.match(software) is None: raise ResponeCheckError("Unexpected software version '%s'; expected to match against '%s'." % (software, self.software))
         except ValueError:
             raise ResponeCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
-        except Exception as err:
-            raise ResponeCheckError(err)
 
         return True
 

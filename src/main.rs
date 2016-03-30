@@ -1,8 +1,10 @@
 extern crate yaml_rust;
 extern crate cpython;
+extern crate hyper;
 
 use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
+use hyper::client::{Client, RedirectPolicy};
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::fs::File;
@@ -29,7 +31,6 @@ fn main() {
     let mut yaml_str = String::new();
     let _ = f.read_to_string(&mut yaml_str);
     let docs = YamlLoader::load_from_str(&yaml_str).unwrap();
-    println!("* {:?}", docs);
 
 /*
 [Array([
@@ -63,8 +64,9 @@ fn main() {
             for hosts_name_yaml in inventory_yaml.keys() {
                 let hosts_name = hosts_name_yaml.as_str().unwrap().to_string();
                 let mut hosts: Vec<String> = Vec::new();
-                for host in inventory_yaml.values().next().unwrap().as_vec().unwrap() {
+                for host in inventory_yaml.get(hosts_name_yaml).unwrap().as_vec().unwrap() {
                     let h = host.as_str().unwrap().to_string();
+                    println!("Host: {}", h);
                     hosts.push(h);
                 }
                 println!("- - Inventory name: '{:?}'", hosts_name);
@@ -164,6 +166,7 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> () {
 
     let kwargs = match &protocol[..] {
         "text/tcp" => text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge).unwrap(),
+        "http/tcp" => http_tcp( host, params["port"].parse::<u16>().unwrap(), challenge).unwrap(),
         unknown => panic!("Unknown protocol '{}'.", unknown)
     };
 
@@ -191,6 +194,25 @@ fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, 
 
     let mut kwargs = Kwargs::new();
     kwargs.insert("response".to_string(), response.to_string());
+
+    Ok(kwargs)
+}
+
+fn http_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
+    let mut client = Client::new();
+
+    let c = challenge.unwrap();
+    let challenge_parts: Vec<&str> = c.split_whitespace().collect();
+    let url = format!("http://{}:{}{}", host, port, challenge_parts[1]);
+    println!("- http request '{}'", url);
+
+    client.set_redirect_policy(RedirectPolicy::FollowNone);
+    let res = client.get(&url).send().unwrap();
+
+    let mut kwargs = Kwargs::new();
+    kwargs.insert("response_code".to_string(), res.status_raw().0.to_string());
+    kwargs.insert("header".to_string(), "".to_string());
+    kwargs.insert("body".to_string(), "".to_string());
 
     Ok(kwargs)
 }
