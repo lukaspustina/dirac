@@ -1,6 +1,9 @@
-extern crate yaml_rust;
 extern crate cpython;
+extern crate env_logger;
 extern crate hyper;
+#[macro_use]
+extern crate log;
+extern crate yaml_rust;
 
 use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
@@ -27,6 +30,10 @@ struct DuckCheck<'a> {
 }
 
 fn main() {
+    if env_logger::init().is_err() {
+        panic!("Could not initiliaze logger");
+    }
+
     let mut f = File::open("./examples/esel.ducks").unwrap();
     let mut yaml_str = String::new();
     let _ = f.read_to_string(&mut yaml_str);
@@ -59,18 +66,18 @@ fn main() {
     for hash in docs[0].as_vec().unwrap() {
         let map = hash.as_hash().unwrap();
         if map.contains_key(&INVENTORY) {
-            println!("- Found inventory: {:?}", hash);
+            debug!("Found inventory: {:?}", hash);
             let inventory_yaml = map.get(&INVENTORY).unwrap().as_hash().unwrap();
             for hosts_name_yaml in inventory_yaml.keys() {
                 let hosts_name = hosts_name_yaml.as_str().unwrap().to_string();
                 let mut hosts: Vec<String> = Vec::new();
                 for host in inventory_yaml.get(hosts_name_yaml).unwrap().as_vec().unwrap() {
                     let h = host.as_str().unwrap().to_string();
-                    println!("Host: {}", h);
+                    debug!("Host: {}", h);
                     hosts.push(h);
                 }
-                println!("- - Inventory name: '{:?}'", hosts_name);
-                println!("- - Inventory hosts: '{:?}'", hosts);
+                debug!("- - Inventory name: '{:?}'", hosts_name);
+                debug!("- - Inventory hosts: '{:?}'", hosts);
                 inventory.insert(hosts_name.to_string(), hosts);
             }
         }
@@ -80,7 +87,7 @@ fn main() {
         if map.contains_key(&INVENTORY) {
         } else {
             if map.contains_key(&HOSTS) && map.contains_key(&PROPERTIES) {
-                println!("- Found duck check: {:?}", hash);
+                debug!("- Found duck check: {:?}", hash);
                 let hosts = inventory.get(map.get(&HOSTS).unwrap().as_str().unwrap()).unwrap();
                 let mut properties = Vec::new();
 
@@ -112,49 +119,59 @@ fn main() {
                 }
 
                 let duck_check = DuckCheck { hosts: hosts, properties: properties };
-                println!("- Created a duck check: {:?}", duck_check);
+                debug!("- Created a duck check: {:?}", duck_check);
                 duck_checks.push(duck_check);
             }
 
         }
     }
-    println!("* Inventory: {:?}", inventory);
-    println!("* DuckChecks: {:?}", duck_checks);
+    info!("* Inventory: {:?}", inventory);
+    info!("* DuckChecks: {:?}", duck_checks);
 
     let gil = Python::acquire_gil();
     let py = gil.python();
 
     let sys = py.import("sys").unwrap();
     let version: String = sys.get(py, "version").unwrap().extract(py).unwrap();
-    println!("* Running Pythion '{}'.", version);
+    info!("* Running Pythion '{}'.", version);
 
+    let mut results = HashMap::new();
     for duck_check in duck_checks {
         for property in duck_check.properties {
             for host in duck_check.hosts {
-                println!("-> Running: '{}' with module '{}' and params '{:?}'.", property.name, property.module, property.params);
-                execute_module(py, host, &property.module, &property.params);
+                debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
+                print!("+ {}: '{}'", property.name, host);
+                let result = execute_module(py, host, &property.module, &property.params);
+                println!(" -> {}", result);
+
+                let key = format!("{}/{}", host, property.name);
+                results.insert(key, result);
             }
         }
+    }
+
+    for kv in results.iter() {
+        println!("{}: {}", kv.0, kv.1);
     }
 
     // clear; cargo build && cp target/debug/duck_check . && PYTHONPATH=modules ./duck_check
 }
 
-fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> () {
+fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     let import = py.import(name).unwrap();
     let module: PyObject = import.get(py, "Module").unwrap();
-    println!("* Loaded module '{}'.", name);
+    info!("* Loaded module '{}'.", name);
 
     let protocol_fn = module.getattr(py, "protocol").unwrap();
     let protocol: String = protocol_fn.call(py, NoArgs, None).unwrap().extract(py).unwrap();
-    println!("- Module protocol is '{}'.", protocol);
+    debug!("- Module protocol is '{}'.", protocol);
 
     let check_args_fn = module.getattr(py, "check_args").unwrap();
     let check_args: bool = check_args_fn.call(py, NoArgs, Some(&params.to_py_object(py))).unwrap().extract(py).unwrap();
-    println!("- Module check args is '{}'.", check_args);
+    debug!("- Module check args is '{}'.", check_args);
 
     let instance: PyObject = module.call(py, NoArgs, Some(&params.to_py_object(py))).unwrap().extract(py).unwrap();
-    println!("- Module instance is '{}'.", instance);
+    debug!("- Module instance is '{}'.", instance);
 
     let py_challenge: PyObject = instance.call_method(py, "challenge", NoArgs, None).unwrap();
     let py_none = py.None();
@@ -171,7 +188,9 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> () {
     };
 
     let result: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
-    println!("- Module response check is '{}'.", result);
+    debug!("- Module response check is '{}'.", result);
+
+    result
 }
 
 fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
@@ -187,7 +206,7 @@ fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, 
     let mut response_bytes = [0; 1024];
     let rx_len = try!(stream.read(&mut response_bytes));
     let response = String::from_utf8_lossy(&response_bytes[0..rx_len]).to_string();
-    println!("- Received result from '{}/{}', result: '{:?}'.",
+    debug!("- Received result from '{}/{}', result: '{:?}'.",
            host,
            port,
            response);
@@ -204,7 +223,7 @@ fn http_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, 
     let c = challenge.unwrap();
     let challenge_parts: Vec<&str> = c.split_whitespace().collect();
     let url = format!("http://{}:{}{}", host, port, challenge_parts[1]);
-    println!("- http request '{}'", url);
+    debug!("- http request '{}'", url);
 
     client.set_redirect_policy(RedirectPolicy::FollowNone);
     let res = client.get(&url).send().unwrap();
