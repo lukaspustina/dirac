@@ -1,15 +1,42 @@
 # vim: set ft=yaml:
 ---
 - inventory:
-    raspi:
+    all:
+      - fritz.box
+      - esel.fritz.box
       - heimbot.fritz.box
+    fritz_box:
+      - fritz.box
     esel:
       - esel.fritz.box
+    raspi:
+      - heimbot.fritz.box
 
-- hosts: raspi
+- hosts: all
   properties:
     - name: Check SSH
       ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
+
+- hosts: fritz_box
+  properties:
+    - name: Check for HTTP
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 200
+
+- hosts: esel
+  properties:
+    - name: Check HTTP Redirect to HTTPS
+      http:
+        port: 5000
+        verb: GET
+        uri: /
+        response_code: 302
+
+- hosts: raspi
+  properties:
     - name: Check HTTP Redirect to HTTPS
       http:
         port: 80
@@ -17,14 +44,4 @@
         uri: /
         response_code: 301
 
-- hosts: esel
-  properties:
-    - name: Check SSH
-      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
-    - name: Check HTTP Redirect to HTTPS
-      http:
-        port: 5000
-        verb: GET
-        uri: /
-        response_code: 302
 

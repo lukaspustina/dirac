@@ -34,7 +34,7 @@ fn main() {
         panic!("Could not initiliaze logger");
     }
 
-    let mut f = File::open("./examples/esel.ducks").unwrap();
+    let mut f = File::open("./examples/pdt.ducks").unwrap();
     let mut yaml_str = String::new();
     let _ = f.read_to_string(&mut yaml_str);
     let docs = YamlLoader::load_from_str(&yaml_str).unwrap();
@@ -182,8 +182,16 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     };
 
     let kwargs = match &protocol[..] {
-        "text/tcp" => text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge).unwrap(),
-        "http/tcp" => http_tcp( host, params["port"].parse::<u16>().unwrap(), challenge).unwrap(),
+        "text/tcp" => if let Ok(res) = text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+            res
+        } else {
+            return false
+        },
+        "http/tcp" => if let Ok(res) = http_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+            res
+        } else {
+            return false
+        },
         unknown => panic!("Unknown protocol '{}'.", unknown)
     };
 
