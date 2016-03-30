@@ -9,7 +9,7 @@ use std::fs::File;
 use std::net::TcpStream;
 use yaml_rust::{YamlLoader, Yaml};
 
-type Kwargs<'a> = HashMap<&'a str, &'a str>;
+type Kwargs = HashMap<String, String>;
 
 #[derive(Debug)]
 struct Property {
@@ -89,7 +89,7 @@ fn main() {
                     let mut module: Option<String> = None;
                     for elem in property_yml.as_hash().unwrap() {
                         if elem.0 == &NAME {
-                            name = Some(elem.0.as_str().unwrap().to_string());
+                            name = Some(elem.1.as_str().unwrap().to_string());
                         } else {
                             module = Some(elem.0.as_str().unwrap().to_string());
                         }
@@ -97,7 +97,13 @@ fn main() {
                     if module.is_some() {
                         let params_yaml = property_yml.as_hash().unwrap().get(&Yaml::from_str(module.as_ref().unwrap())).unwrap().as_hash().unwrap();
                         for kv in params_yaml {
-                            params.insert(kv.0.as_str().unwrap().to_string(), kv.0.as_str().unwrap().to_string());
+                            let value: String = match *kv.1 {
+                                Yaml::Integer(i) => i.to_string(),
+                                Yaml::Real(ref r) => r.to_string(),
+                                Yaml::String(ref string) => string.to_string(),
+                                _ => "<could not translate YAML value>".to_string(),
+                            };
+                            params.insert(kv.0.as_str().unwrap().to_string(), value);
                         }
                     }
                     properties.push( Property { name: name.unwrap(), module: module.unwrap(), params: params } );
@@ -122,12 +128,9 @@ fn main() {
 
     for duck_check in duck_checks {
         for property in duck_check.properties {
-            let mut params = Kwargs::new();
-            for kv in property.params {
-                params.insert(&kv.0, &kv.1);
-            }
             for host in duck_check.hosts {
-                execute_module(py, host, "ssh", &params);
+                println!("-> Running: '{}' with module '{}' and params '{:?}'.", property.name, property.module, property.params);
+                execute_module(py, host, &property.module, &property.params);
             }
         }
     }
@@ -165,7 +168,7 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> () {
         challenge).unwrap();
 
     let mut kwargs = Kwargs::new();
-    kwargs.insert("response", &response);
+    kwargs.insert("response".to_string(), response.to_string());
     let result: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
     println!("- Module response check is '{}'.", result);
 }
