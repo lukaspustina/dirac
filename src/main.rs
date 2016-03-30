@@ -162,18 +162,16 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> () {
         Some(py_challenge.extract::<PyString>(py).unwrap().to_string(py).unwrap().to_string())
     };
 
-    let response = text_tcp(
-        host,
-        params["port"].parse::<u16>().unwrap(),
-        challenge).unwrap();
+    let kwargs = match &protocol[..] {
+        "text/tcp" => text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge).unwrap(),
+        unknown => panic!("Unknown protocol '{}'.", unknown)
+    };
 
-    let mut kwargs = Kwargs::new();
-    kwargs.insert("response".to_string(), response.to_string());
     let result: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
     println!("- Module response check is '{}'.", result);
 }
 
-fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<String, std::io::Error> {
+fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
     let mut stream = try!(TcpStream::connect((host, port)));
 
     if let Some(challenge) = challenge {
@@ -185,12 +183,15 @@ fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<String, 
 
     let mut response_bytes = [0; 1024];
     let rx_len = try!(stream.read(&mut response_bytes));
-    let respone = String::from_utf8_lossy(&response_bytes[0..rx_len]).to_string();
+    let response = String::from_utf8_lossy(&response_bytes[0..rx_len]).to_string();
     println!("- Received result from '{}/{}', result: '{:?}'.",
            host,
            port,
-           respone);
+           response);
 
-    Ok(respone)
+    let mut kwargs = Kwargs::new();
+    kwargs.insert("response".to_string(), response.to_string());
+
+    Ok(kwargs)
 }
 
