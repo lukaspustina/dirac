@@ -25,6 +25,7 @@ struct Property {
 
 #[derive(Debug)]
 struct DuckCheck<'a> {
+    inventory_name: String,
     hosts: &'a Vec<String>,
     properties: Vec<Property>
 }
@@ -88,7 +89,8 @@ fn main() {
         } else {
             if map.contains_key(&HOSTS) && map.contains_key(&PROPERTIES) {
                 debug!("- Found duck check: {:?}", hash);
-                let hosts = inventory.get(map.get(&HOSTS).unwrap().as_str().unwrap()).unwrap();
+                let inventory_name = map.get(&HOSTS).unwrap().as_str().unwrap();
+                let hosts = inventory.get(inventory_name).unwrap();
                 let mut properties = Vec::new();
 
                 let properties_yaml = map.get(&PROPERTIES).unwrap().as_vec().unwrap();
@@ -118,7 +120,7 @@ fn main() {
                     properties.push( Property { name: name.unwrap(), module: module.unwrap(), params: params } );
                 }
 
-                let duck_check = DuckCheck { hosts: hosts, properties: properties };
+                let duck_check = DuckCheck { inventory_name: inventory_name.to_string(), hosts: hosts, properties: properties };
                 debug!("- Created a duck check: {:?}", duck_check);
                 duck_checks.push(duck_check);
             }
@@ -137,17 +139,19 @@ fn main() {
 
     let mut results = HashMap::new();
     for duck_check in duck_checks {
+        println!("Checking whether [{}] are ducks", duck_check.inventory_name);
         for property in duck_check.properties {
+            println!("+ {}", property.name);
             for host in duck_check.hosts {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
-                print!("+ {}: '{}'", property.name, host);
                 let result = execute_module(py, host, &property.module, &property.params);
-                println!(" -> {}", result);
+                println!(" - {}: {}", host, result);
 
                 let key = format!("{}/{}", host, property.name);
                 results.insert(key, result);
             }
         }
+        println!("");
     }
 
     for kv in results.iter() {
