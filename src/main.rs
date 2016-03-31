@@ -3,6 +3,7 @@ extern crate env_logger;
 extern crate hyper;
 #[macro_use]
 extern crate log;
+extern crate term_painter;
 extern crate yaml_rust;
 
 use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
@@ -12,6 +13,9 @@ use std::collections::HashMap;
 use std::io::prelude::*;
 use std::fs::File;
 use std::net::TcpStream;
+use term_painter::ToStyle;
+use term_painter::Color::*;
+use term_painter::Attr::*;
 use yaml_rust::{YamlLoader, Yaml};
 
 type Kwargs = HashMap<String, String>;
@@ -139,13 +143,17 @@ fn main() {
 
     let mut results = HashMap::new();
     for duck_check in duck_checks {
-        println!("Checking whether [{}] are ducks", duck_check.inventory_name);
+        println!("Checking whether [{}] are ducks", Bold.paint(duck_check.inventory_name));
         for property in duck_check.properties {
             println!("+ {}", property.name);
             for host in duck_check.hosts {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property.module, &property.params);
-                println!(" - {}: {}", host, result);
+                if result {
+                    println!(" - {}: {}", host, Green.paint(result));
+                } else {
+                    println!(" - {}: {}", host, Red.paint(result));
+                }
 
                 let key = format!("{}/{}", host, property.name);
                 results.insert(key, result);
@@ -154,9 +162,11 @@ fn main() {
         println!("");
     }
 
+    /*
     for kv in results.iter() {
         println!("{}: {}", kv.0, kv.1);
     }
+    */
 
     // clear; cargo build && cp target/debug/duck_check . && PYTHONPATH=modules ./duck_check
 }
