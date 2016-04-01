@@ -1,0 +1,44 @@
+# vim: set ft=yaml:
+---
+- inventory:
+    all:
+      - webserver.centerdevice.de
+
+- hosts: all
+  properties:
+    - name: FTP for Wordpress
+      raw_tcp:
+        port: 21
+    - name: FTP for Desktop Client Updates
+      raw_tcp:
+        port: 2181
+    - name: SSH Access
+      ssh:
+        port: 22
+        version: 2.0
+        software: "OpenSSH.*"
+    - name: HTTP Redirects to HTTPS
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 301
+    - name: HTTPS
+      https:
+        port: 443
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: Bosun
+      https:
+        port: 8070
+        verb: GET
+        uri: /
+        response_code: 401
+    - name: Bosun TE
+      https:
+        port: 8170
+        verb: GET
+        uri: /
+        response_code: 401
+
