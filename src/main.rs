@@ -147,16 +147,16 @@ fn main() {
 
     let mut results = HashMap::new();
     for duck_check in duck_checks {
-        println!("Checking whether [{}] are ducks", Bold.paint(duck_check.inventory_name));
+        println!("CHECKING [{}]", Bold.paint(duck_check.inventory_name));
         for property in duck_check.properties {
-            println!("+ [{}:{}]: {}", Bold.paint(&property.module), &property.params.get("port").unwrap(), property.name);
+            println!("  PROPERTY: {} [{}:{}]", property.name, Bold.paint(&property.module), &property.params.get("port").unwrap());
             for host in duck_check.hosts {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property.module, &property.params);
                 if result {
-                    println!(" - {}: {}", host, Green.paint(result));
+                    println!("    {:>5}: [{}]", Green.paint(result), host);
                 } else {
-                    println!(" - {}: {}", host, Red.paint(result));
+                    println!("    {}: [{}]", Red.paint(result), host);
                 }
 
                 let key = format!("{}/{}", host, property.name);
