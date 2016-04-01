@@ -21,12 +21,24 @@
 
 - hosts: fritz_box
   properties:
+    - name: DNS TCP Port
+      raw_tcp:
+        port: 53
+    - name: SIP TCP Port
+      raw_tcp:
+        port: 5060
     - name: Check for HTTP
       http:
         port: 80
         verb: GET
         uri: /
         response_code: 200
+    - name: Check for HTTP on 8181
+      http:
+        port: 8181
+        verb: GET
+        uri: /
+        response_code: 404
     - name: Check for HTTPS
       https:
         port: 443
@@ -37,6 +49,27 @@
 
 - hosts: esel
   properties:
+    - name: NetBios TCP Port
+      raw_tcp:
+        port: 139
+    - name: SNMP TCP Port
+      raw_tcp:
+        port: 161
+    - name: Microsoft DS TCP Port
+      raw_tcp:
+        port: 445
+    - name: Apple File Protocol TCP Port
+      raw_tcp:
+        port: 548
+    - name: RSync TCP Port
+      raw_tcp:
+        port: 873
+    - name: RSync TCP Port
+      raw_tcp:
+        port: 873
+    - name: UPNP TCP Port
+      raw_tcp:
+        port: 5000
     - name: Check HTTP Redirect to HTTPS
       http:
         port: 5000
@@ -65,4 +98,10 @@
         verb: GET
         uri: /
         response_code: 200
+    - name: Check for HTTPS (Fhem)
+      https:
+        port: 8083
+        verb: GET
+        uri: /
+        response_code: 302
 

@@ -196,6 +196,11 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     };
 
     let kwargs = match &protocol[..] {
+        "raw/tcp" => if let Ok(res) = raw_tcp( host, params["port"].parse::<u16>().unwrap()) {
+            res
+        } else {
+            return false
+        },
         "text/tcp" => if let Ok(res) = text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
@@ -218,6 +223,12 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     debug!("- Module response check is '{}'.", result);
 
     result
+}
+
+fn raw_tcp(host: &str, port: u16) -> Result<Kwargs, std::io::Error> {
+    let mut kwargs = Kwargs::new();
+
+    Ok(kwargs)
 }
 
 fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
