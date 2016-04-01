@@ -10,6 +10,7 @@ use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
 use hyper::client::{Client, RedirectPolicy};
 use std::collections::HashMap;
+use std::env;
 use std::io::prelude::*;
 use std::fs::File;
 use std::net::TcpStream;
@@ -35,11 +36,14 @@ struct DuckCheck<'a> {
 }
 
 fn main() {
+    // PYTHONPATH=modules cargo run -- examples/pdt.ducks
+
     if env_logger::init().is_err() {
         panic!("Could not initiliaze logger");
     }
+    let args: Vec<_> = env::args().collect();
 
-    let mut f = File::open("./examples/pdt.ducks").unwrap();
+    let mut f = File::open(&args[1]).unwrap();
     let mut yaml_str = String::new();
     let _ = f.read_to_string(&mut yaml_str);
     let docs = YamlLoader::load_from_str(&yaml_str).unwrap();
@@ -168,7 +172,6 @@ fn main() {
     }
     */
 
-    // clear; cargo build && cp target/debug/duck_check . && PYTHONPATH=modules ./duck_check
 }
 
 fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
