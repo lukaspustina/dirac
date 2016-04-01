@@ -145,7 +145,7 @@ fn main() {
     for duck_check in duck_checks {
         println!("Checking whether [{}] are ducks", Bold.paint(duck_check.inventory_name));
         for property in duck_check.properties {
-            println!("+ {}", property.name);
+            println!("+ [{}:{}]: {}", Bold.paint(&property.module), &property.params.get("port").unwrap(), property.name);
             for host in duck_check.hosts {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property.module, &property.params);
