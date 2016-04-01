@@ -104,4 +104,10 @@
         verb: GET
         uri: /
         response_code: 302
+    - name: Check for HAProxy Admin UI
+      http:
+        port: 8404
+        verb: GET
+        uri: /monitor
+        response_code: 401
 
