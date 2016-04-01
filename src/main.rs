@@ -206,6 +206,11 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
         } else {
             return false
         },
+        "https/tcp" => if let Ok(res) = https_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+            res
+        } else {
+            return false
+        },
         unknown => panic!("Unknown protocol '{}'.", unknown)
     };
 
@@ -246,6 +251,25 @@ fn http_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, 
     let challenge_parts: Vec<&str> = c.split_whitespace().collect();
     let url = format!("http://{}:{}{}", host, port, challenge_parts[1]);
     debug!("- http request '{}'", url);
+
+    client.set_redirect_policy(RedirectPolicy::FollowNone);
+    let res = client.get(&url).send().unwrap();
+
+    let mut kwargs = Kwargs::new();
+    kwargs.insert("response_code".to_string(), res.status_raw().0.to_string());
+    kwargs.insert("header".to_string(), "".to_string());
+    kwargs.insert("body".to_string(), "".to_string());
+
+    Ok(kwargs)
+}
+
+fn https_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
+    let mut client = Client::new();
+
+    let c = challenge.unwrap();
+    let challenge_parts: Vec<&str> = c.split_whitespace().collect();
+    let url = format!("https://{}:{}{}", host, port, challenge_parts[1]);
+    debug!("- https request '{}'", url);
 
     client.set_redirect_policy(RedirectPolicy::FollowNone);
     let res = client.get(&url).send().unwrap();
