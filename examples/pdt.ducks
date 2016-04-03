@@ -21,10 +21,13 @@
 
 - hosts: fritz_box
   properties:
-    - name: DNS TCP Port
+    - name: DNS TCP
       raw_tcp:
         port: 53
-    - name: SIP TCP Port
+    - name: DNS UDP
+      dns_udp:
+        port: 53
+    - name: SIP TCP
       raw_tcp:
         port: 5060
     - name: Check for HTTP

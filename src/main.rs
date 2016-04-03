@@ -13,7 +13,8 @@ use std::collections::HashMap;
 use std::env;
 use std::io::prelude::*;
 use std::fs::File;
-use std::net::TcpStream;
+use std::net::{TcpStream, UdpSocket};
+use std::time::Duration;
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
@@ -209,6 +210,11 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
         } else {
             return false
         },
+        "text/udp" => if let Ok(res) = text_udp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+            res
+        } else {
+            return false
+        },
         "http/tcp" => if let Ok(res) = http_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
@@ -231,6 +237,37 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
 fn raw_tcp(host: &str, port: u16) -> Result<Kwargs, std::io::Error> {
     let mut kwargs = Kwargs::new();
 
+/*
+    let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
+
+    fn set_read_timeout(&self, dur: Option<Duration>) -> Result<()>
+
+
+    // ignore the Result
+    let _ = stream.write(&[1]);
+    let _ = stream.read(&mut [0; 128]); // ignore here too
+*/
+    Ok(kwargs)
+}
+
+fn text_udp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
+    let mut kwargs = Kwargs::new();
+
+    let dur = Duration::new(5, 0);
+    let mut socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
+    socket.set_read_timeout(Some(dur)).unwrap();
+
+    if let Some(c) = challenge {
+        let tx_buf = c.as_bytes();
+        let tx_len = tx_buf.len();
+        try!(socket.send_to(tx_buf, (host, port)));
+    };
+
+    let mut rx_buf = [0; 1024];
+    let (rx_len, _) = try!(socket.recv_from(&mut rx_buf));
+
+    let response = String::from_utf8_lossy(&rx_buf[0..rx_len]).to_string();
+    kwargs.insert("response".to_string(), response);
     Ok(kwargs)
 }
 
