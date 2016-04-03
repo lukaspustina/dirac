@@ -1,5 +1,5 @@
 import http
-from duck import *
+from dirac import *
 
 import re
 

@@ -1,4 +1,4 @@
-class Duck(object):
+class Dirac(object):
 
     _module_protocol = ""
 

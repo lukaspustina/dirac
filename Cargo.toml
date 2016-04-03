@@ -1,10 +1,10 @@
 [package]
-name = "duck_checker"
+name = "dirac"
 version = "0.0.1"
 authors = ["Lukas Pustina <lukas@pustina.net>"]
 
 [[bin]]
-name = "duck_check"
+name = "dirac"
 path = "src/main.rs"
 
 [dependencies]

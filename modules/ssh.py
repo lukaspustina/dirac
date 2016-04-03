@@ -1,5 +1,5 @@
 import text_tcp
-from duck import *
+from dirac import *
 
 import re
 

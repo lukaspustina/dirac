@@ -30,14 +30,14 @@ struct Property {
 }
 
 #[derive(Debug)]
-struct DuckCheck<'a> {
+struct Check<'a> {
     inventory_name: String,
     hosts: &'a Vec<String>,
     properties: Vec<Property>
 }
 
 fn main() {
-    // PYTHONPATH=modules cargo run -- examples/pdt.ducks
+    // PYTHONPATH=modules cargo run -- examples/pdt.yml
 
     if env_logger::init().is_err() {
         panic!("Could not initiliaze logger");
@@ -72,7 +72,7 @@ fn main() {
     let HOSTS = Yaml::from_str("hosts");
     let PROPERTIES = Yaml::from_str("properties");
     let NAME = Yaml::from_str("name");
-    let mut duck_checks = Vec::new();
+    let mut checks = Vec::new();
     for hash in docs[0].as_vec().unwrap() {
         let map = hash.as_hash().unwrap();
         if map.contains_key(&INVENTORY) {
@@ -97,7 +97,7 @@ fn main() {
         if map.contains_key(&INVENTORY) {
         } else {
             if map.contains_key(&HOSTS) && map.contains_key(&PROPERTIES) {
-                debug!("- Found duck check: {:?}", hash);
+                debug!("- Found check: {:?}", hash);
                 let inventory_name = map.get(&HOSTS).unwrap().as_str().unwrap();
                 let hosts = inventory.get(inventory_name).unwrap();
                 let mut properties = Vec::new();
@@ -129,15 +129,15 @@ fn main() {
                     properties.push( Property { name: name.unwrap(), module: module.unwrap(), params: params } );
                 }
 
-                let duck_check = DuckCheck { inventory_name: inventory_name.to_string(), hosts: hosts, properties: properties };
-                debug!("- Created a duck check: {:?}", duck_check);
-                duck_checks.push(duck_check);
+                let check = Check { inventory_name: inventory_name.to_string(), hosts: hosts, properties: properties };
+                debug!("- Created a check: {:?}", check);
+                checks.push(check);
             }
 
         }
     }
     info!("* Inventory: {:?}", inventory);
-    info!("* DuckChecks: {:?}", duck_checks);
+    info!("* Checks: {:?}", checks);
 
     let gil = Python::acquire_gil();
     let py = gil.python();
@@ -147,11 +147,11 @@ fn main() {
     info!("* Running Pythion '{}'.", version);
 
     let mut results_by_host = HashMap::<&str, (u16,u16)>::new();
-    for duck_check in duck_checks {
-        println!("CHECKING [{}]", Bold.paint(duck_check.inventory_name));
-        for property in duck_check.properties {
+    for check in checks {
+        println!("CHECKING [{}]", Bold.paint(check.inventory_name));
+        for property in check.properties {
             println!("  PROPERTY: {} [{}:{}]", property.name, Bold.paint(&property.module), &property.params.get("port").unwrap());
-            for host in duck_check.hosts {
+            for host in check.hosts {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property.module, &property.params);
                 if result {
