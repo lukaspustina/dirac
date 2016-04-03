@@ -237,16 +237,8 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
 fn raw_tcp(host: &str, port: u16) -> Result<Kwargs, std::io::Error> {
     let mut kwargs = Kwargs::new();
 
-/*
-    let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
+    let mut stream = try!(TcpStream::connect((host, port)));
 
-    fn set_read_timeout(&self, dur: Option<Duration>) -> Result<()>
-
-
-    // ignore the Result
-    let _ = stream.write(&[1]);
-    let _ = stream.read(&mut [0; 128]); // ignore here too
-*/
     Ok(kwargs)
 }
 
