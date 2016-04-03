@@ -146,7 +146,7 @@ fn main() {
     let version: String = sys.get(py, "version").unwrap().extract(py).unwrap();
     info!("* Running Pythion '{}'.", version);
 
-    let mut results = HashMap::new();
+    let mut results_by_host = HashMap::<&str, (u16,u16)>::new();
     for duck_check in duck_checks {
         println!("CHECKING [{}]", Bold.paint(duck_check.inventory_name));
         for property in duck_check.properties {
@@ -155,23 +155,26 @@ fn main() {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property.module, &property.params);
                 if result {
-                    println!("    {:>5}: [{}]", Green.paint(result), host);
+                    println!("    {:>7}: [{}]", Green.paint("Success"), host);
                 } else {
-                    println!("    {}: [{}]", Red.paint(result), host);
+                    println!("    {:>7}: [{}]", Red.paint("Failed"), host);
                 }
 
-                let key = format!("{}/{}", host, property.name);
-                results.insert(key, result);
+                let mut host_results = results_by_host.entry(&host).or_insert((0,0));
+                if result {
+                    host_results.0 += 1;
+                } else {
+                    host_results.1 += 1;
+                }
             }
         }
         println!("");
     }
 
-    /*
-    for kv in results.iter() {
-        println!("{}: {}", kv.0, kv.1);
+    println!("SUMMARY");
+    for kv in results_by_host.iter() {
+        println!("{:<20} Success {:>4}, Failed {:>4}", Bold.paint(kv.0), Green.paint((kv.1).0), Red.paint((kv.1).1));
     }
-    */
 
 }
 
