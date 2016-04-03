@@ -7,11 +7,13 @@
 - hosts: all
   properties:
     - name: FTP for Wordpress
-      raw_tcp:
+      ftp:
         port: 21
+        response_code: 220
     - name: FTP for Desktop Client Updates
-      raw_tcp:
+      ftp:
         port: 2181
+        response_code: 220
     - name: SSH Access
       ssh:
         port: 22
