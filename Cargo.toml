@@ -1,10 +1,10 @@
 [package]
 name = "dirac"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Lukas Pustina <lukas@pustina.net>"]
 
 [[bin]]
-name = "dirac"
+name = "dirac-check"
 path = "src/main.rs"
 
 [dependencies]
