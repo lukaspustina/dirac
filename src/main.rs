@@ -1,6 +1,5 @@
 extern crate cpython;
 extern crate env_logger;
-extern crate hyper;
 #[macro_use]
 extern crate log;
 extern crate term_painter;
@@ -9,20 +8,14 @@ extern crate dirac;
 
 use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
-use hyper::client::{Client, RedirectPolicy};
 use std::collections::HashMap;
 use std::env;
-use std::io::prelude::*;
-use std::fs::File;
-use std::net::{TcpStream, UdpSocket};
-use std::time::Duration;
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
 use dirac::checks::CheckSuite;
-
-type Kwargs = HashMap<String, String>;
+use dirac::protocols::*;
 
 fn main() {
     // PYTHONPATH=modules cargo run -- examples/pdt.yml
@@ -72,7 +65,7 @@ fn main() {
 
 }
 
-fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
+fn execute_module(py: Python, host: &str, name: &str, params: &dirac::engine::Kwargs) -> bool {
     let import = py.import(name).unwrap();
     let module: PyObject = import.get(py, "Module").unwrap();
     info!("* Loaded module '{}'.", name);
@@ -129,96 +122,5 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     debug!("- Module response check is '{}'.", result);
 
     result
-}
-
-fn raw_tcp(host: &str, port: u16) -> Result<Kwargs, std::io::Error> {
-    let mut kwargs = Kwargs::new();
-
-    let mut stream = try!(TcpStream::connect((host, port)));
-
-    Ok(kwargs)
-}
-
-fn text_udp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
-    let mut kwargs = Kwargs::new();
-
-    let dur = Duration::new(5, 0);
-    let mut socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
-    socket.set_read_timeout(Some(dur)).unwrap();
-
-    if let Some(c) = challenge {
-        let tx_buf = c.as_bytes();
-        let tx_len = tx_buf.len();
-        try!(socket.send_to(tx_buf, (host, port)));
-    };
-
-    let mut rx_buf = [0; 1024];
-    let (rx_len, _) = try!(socket.recv_from(&mut rx_buf));
-
-    let response = String::from_utf8_lossy(&rx_buf[0..rx_len]).to_string();
-    kwargs.insert("response".to_string(), response);
-    Ok(kwargs)
-}
-
-fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
-    let mut stream = try!(TcpStream::connect((host, port)));
-
-    if let Some(challenge) = challenge {
-        let challenge_bytes = challenge.as_bytes();
-        let tx_res = try!(stream.write(&challenge_bytes));
-        // TODO: Assert to real check
-        assert_eq!(tx_res, challenge_bytes.len());
-    }
-
-    let mut response_bytes = [0; 1024];
-    let rx_len = try!(stream.read(&mut response_bytes));
-    let response = String::from_utf8_lossy(&response_bytes[0..rx_len]).to_string();
-    debug!("- Received result from '{}/{}', result: '{:?}'.",
-           host,
-           port,
-           response);
-
-    let mut kwargs = Kwargs::new();
-    kwargs.insert("response".to_string(), response.to_string());
-
-    Ok(kwargs)
-}
-
-fn http_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
-    let mut client = Client::new();
-
-    let c = challenge.unwrap();
-    let challenge_parts: Vec<&str> = c.split_whitespace().collect();
-    let url = format!("http://{}:{}{}", host, port, challenge_parts[1]);
-    debug!("- http request '{}'", url);
-
-    client.set_redirect_policy(RedirectPolicy::FollowNone);
-    let res = client.get(&url).send().unwrap();
-
-    let mut kwargs = Kwargs::new();
-    kwargs.insert("response_code".to_string(), res.status_raw().0.to_string());
-    kwargs.insert("header".to_string(), "".to_string());
-    kwargs.insert("body".to_string(), "".to_string());
-
-    Ok(kwargs)
-}
-
-fn https_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, std::io::Error> {
-    let mut client = Client::new();
-
-    let c = challenge.unwrap();
-    let challenge_parts: Vec<&str> = c.split_whitespace().collect();
-    let url = format!("https://{}:{}{}", host, port, challenge_parts[1]);
-    debug!("- https request '{}'", url);
-
-    client.set_redirect_policy(RedirectPolicy::FollowNone);
-    let res = client.get(&url).send().unwrap();
-
-    let mut kwargs = Kwargs::new();
-    kwargs.insert("response_code".to_string(), res.status_raw().0.to_string());
-    kwargs.insert("header".to_string(), "".to_string());
-    kwargs.insert("body".to_string(), "".to_string());
-
-    Ok(kwargs)
 }
 
