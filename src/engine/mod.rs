@@ -5,16 +5,50 @@ use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
-use super::checks::CheckSuite;
+use super::checks::*;
 use super::protocols::*;
 
 pub type Kwargs = HashMap<String, String>;
 
 pub type Results<'a> = HashMap<&'a str, (u16,u16)>;
 
+pub enum PropertyError {
+    FailedResponseCheck,
+    FailedExecution,
+    Unclassified,
+}
+
+pub struct PropertyResult<'a> {
+    pub host: &'a str,
+    pub property: &'a Property,
+    pub result: Result<(), PropertyError>
+}
+
+pub struct CheckResult<'a> {
+    pub check: &'a Check,
+    pub results: Vec<PropertyResult<'a>>
+}
+
+impl<'a> CheckResult<'a> {
+    pub fn new(check: &'a Check) -> CheckResult {
+        CheckResult { check: check, results: Vec::new() }
+    }
+}
+
+pub struct CheckSuiteResult<'a> {
+    pub check_suite: &'a CheckSuite,
+    pub results: Vec<CheckResult<'a>>,
+}
+
+impl<'a> CheckSuiteResult<'a> {
+    pub fn new(check_suite: &'a CheckSuite) -> CheckSuiteResult {
+        CheckSuiteResult { check_suite: check_suite, results: Vec::new() }
+    }
+}
 
 pub fn run(check_suite: &CheckSuite) -> Results {
     let mut results_by_host = Results::new();
+    let mut check_suite_results = CheckSuiteResult::new(check_suite);
 
     let gil = Python::acquire_gil();
     let py = gil.python();
@@ -25,25 +59,33 @@ pub fn run(check_suite: &CheckSuite) -> Results {
 
     for check in &check_suite.checks {
         println!("CHECKING [{}]", Bold.paint(&check.inventory_name));
+        let mut check_result = CheckResult::new(&check);
+
         for property in &check.properties {
             println!("  PROPERTY: {} [{}:{}]", property.name, Bold.paint(&property.module), &property.params.get("port").unwrap());
             for host in check_suite.inventory.get(&check.inventory_name).unwrap() {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
-                let result = execute_module(py, host, &property.module, &property.params);
-                if result {
+                let result = execute_module(py, host, &property);
+                let property_result = PropertyResult { host: host, property: &property, result: result };
+
+                if property_result.result.is_ok() {
                     println!("    {:>7}: [{}]", Green.paint("Success"), host);
                 } else {
                     println!("    {:>7}: [{}]", Red.paint("Failed"), host);
                 }
 
                 let mut host_results = results_by_host.entry(&host).or_insert((0,0));
-                if result {
+                if property_result.result.is_ok() {
                     host_results.0 += 1;
                 } else {
                     host_results.1 += 1;
                 }
+
+                check_result.results.push(property_result);
             }
+
         }
+        check_suite_results.results.push(check_result);
         println!("");
     }
 
@@ -52,20 +94,20 @@ pub fn run(check_suite: &CheckSuite) -> Results {
 }
 
 
-fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
-    let import = py.import(name).unwrap();
+fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(), PropertyError> {
+    let import = py.import(&property.module).unwrap();
     let module: PyObject = import.get(py, "Module").unwrap();
-    info!("* Loaded module '{}'.", name);
+    info!("* Loaded module '{}'.", &property.name);
 
     let protocol_fn = module.getattr(py, "protocol").unwrap();
     let protocol: String = protocol_fn.call(py, NoArgs, None).unwrap().extract(py).unwrap();
     debug!("- Module protocol is '{}'.", protocol);
 
     let check_args_fn = module.getattr(py, "check_args").unwrap();
-    let check_args: bool = check_args_fn.call(py, NoArgs, Some(&params.to_py_object(py))).unwrap().extract(py).unwrap();
+    let check_args: bool = check_args_fn.call(py, NoArgs, Some(&property.params.to_py_object(py))).unwrap().extract(py).unwrap();
     debug!("- Module check args is '{}'.", check_args);
 
-    let instance: PyObject = module.call(py, NoArgs, Some(&params.to_py_object(py))).unwrap().extract(py).unwrap();
+    let instance: PyObject = module.call(py, NoArgs, Some(&property.params.to_py_object(py))).unwrap().extract(py).unwrap();
     debug!("- Module instance is '{}'.", instance);
 
     let py_challenge: PyObject = instance.call_method(py, "challenge", NoArgs, None).unwrap();
@@ -77,30 +119,30 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     };
 
     let kwargs = match &protocol[..] {
-        "raw/tcp" => if let Ok(res) = raw_tcp( host, params["port"].parse::<u16>().unwrap()) {
+        "raw/tcp" => if let Ok(res) = raw_tcp( host, property.params["port"].parse::<u16>().unwrap()) {
             res
         } else {
-            return false
+            return Err(PropertyError::FailedExecution)
         },
-        "text/tcp" => if let Ok(res) = text_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+        "text/tcp" => if let Ok(res) = text_tcp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
-            return false
+            return Err(PropertyError::FailedExecution)
         },
-        "text/udp" => if let Ok(res) = text_udp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+        "text/udp" => if let Ok(res) = text_udp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
-            return false
+            return Err(PropertyError::FailedExecution)
         },
-        "http/tcp" => if let Ok(res) = http_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+        "http/tcp" => if let Ok(res) = http_tcp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
-            return false
+            return Err(PropertyError::FailedExecution)
         },
-        "https/tcp" => if let Ok(res) = https_tcp( host, params["port"].parse::<u16>().unwrap(), challenge) {
+        "https/tcp" => if let Ok(res) = https_tcp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             res
         } else {
-            return false
+            return Err(PropertyError::FailedExecution)
         },
         unknown => panic!("Unknown protocol '{}'.", unknown)
     };
@@ -108,6 +150,10 @@ fn execute_module(py: Python, host: &str, name: &str, params: &Kwargs) -> bool {
     let result: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
     debug!("- Module response check is '{}'.", result);
 
-    result
+    return if result {
+        Ok(())
+    } else {
+        Err(PropertyError::FailedExecution)
+    }
 }
 

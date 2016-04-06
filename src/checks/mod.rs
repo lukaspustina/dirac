@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::fs::File;
 use yaml_rust::{YamlLoader, Yaml};
 
-pub type Kwargs = HashMap<String, String>;
 pub type Inventory = HashMap<String, Vec<String>>;
 
 #[derive(Debug)]
