@@ -15,6 +15,7 @@ use term_painter::Attr::*;
 
 use dirac::checks::CheckSuite;
 use dirac::engine::CheckSuiteResult;
+use dirac::reports::*;
 
 static VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -35,6 +36,9 @@ fn main() {
     for filename in check_suite_filenames {
         let check_suite = CheckSuite::read_from_file(&filename).unwrap();
         let results = dirac::engine::run(&check_suite);
+
+        let report = SummaryReport::new(&results);
+        report.print();
     }
 }
 

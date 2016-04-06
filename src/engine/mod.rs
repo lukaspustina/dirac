@@ -47,7 +47,7 @@ impl<'a> CheckSuiteResult<'a> {
 }
 
 pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
-    let mut check_suite_results = CheckSuiteResult::new(check_suite);
+    let mut check_suite_result = CheckSuiteResult::new(check_suite);
 
     let gil = Python::acquire_gil();
     let py = gil.python();
@@ -77,11 +77,11 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
             }
 
         }
-        check_suite_results.results.push(check_result);
+        check_suite_result.results.push(check_result);
         println!("");
     }
 
-    return check_suite_results
+    return check_suite_result
 
 }
 
