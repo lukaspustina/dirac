@@ -14,6 +14,7 @@ use term_painter::Color::*;
 use term_painter::Attr::*;
 
 use dirac::checks::CheckSuite;
+use dirac::engine::CheckSuiteResult;
 
 static VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -32,17 +33,8 @@ fn main() {
 
     let check_suite_filenames = cli_args.values_of("check_suite").unwrap();
     for filename in check_suite_filenames {
-        run_check_suite(filename);
-    }
-}
-
-fn run_check_suite(file_name: &str) {
-    let check_suite = CheckSuite::read_from_file(file_name).unwrap();
-    let results_by_host = dirac::engine::run(&check_suite);
-
-    println!("SUMMARY");
-    for kv in results_by_host.iter() {
-        println!("{:<20} Success {:>4}, Failed {:>4}", Bold.paint(kv.0), Green.paint((kv.1).0), Red.paint((kv.1).1));
+        let check_suite = CheckSuite::read_from_file(&filename).unwrap();
+        let results = dirac::engine::run(&check_suite);
     }
 }
 

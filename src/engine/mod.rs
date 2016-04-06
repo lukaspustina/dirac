@@ -46,8 +46,7 @@ impl<'a> CheckSuiteResult<'a> {
     }
 }
 
-pub fn run(check_suite: &CheckSuite) -> Results {
-    let mut results_by_host = Results::new();
+pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
     let mut check_suite_results = CheckSuiteResult::new(check_suite);
 
     let gil = Python::acquire_gil();
@@ -74,13 +73,6 @@ pub fn run(check_suite: &CheckSuite) -> Results {
                     println!("    {:>7}: [{}]", Red.paint("Failed"), host);
                 }
 
-                let mut host_results = results_by_host.entry(&host).or_insert((0,0));
-                if property_result.result.is_ok() {
-                    host_results.0 += 1;
-                } else {
-                    host_results.1 += 1;
-                }
-
                 check_result.results.push(property_result);
             }
 
@@ -89,7 +81,7 @@ pub fn run(check_suite: &CheckSuite) -> Results {
         println!("");
     }
 
-    return results_by_host;
+    return check_suite_results
 
 }
 
