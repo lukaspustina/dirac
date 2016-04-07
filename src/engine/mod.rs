@@ -1,6 +1,7 @@
 use cpython::{PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
 use std::collections::HashMap;
+use std::fmt;
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
@@ -12,18 +13,32 @@ pub type Kwargs = HashMap<String, String>;
 
 pub type Results<'a> = HashMap<&'a str, (u16,u16)>;
 
+#[derive(Debug)]
 pub enum PropertyError {
     FailedResponseCheck,
     FailedExecution,
     Unclassified,
 }
 
+impl fmt::Display for PropertyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let err_name = match self {
+            &PropertyError::FailedResponseCheck => "FailedResponseCheck",
+            &PropertyError::FailedExecution => "FailedExecution",
+            &PropertyError::Unclassified => "Unclassified",
+        };
+        write!(f, "{}", err_name)
+    }
+}
+
+#[derive(Debug)]
 pub struct PropertyResult<'a> {
     pub host: &'a str,
     pub property: &'a Property,
     pub result: Result<(), PropertyError>
 }
 
+#[derive(Debug)]
 pub struct CheckResult<'a> {
     pub check: &'a Check,
     pub results: Vec<PropertyResult<'a>>
@@ -35,6 +50,7 @@ impl<'a> CheckResult<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct CheckSuiteResult<'a> {
     pub check_suite: &'a CheckSuite,
     pub results: Vec<CheckResult<'a>>,

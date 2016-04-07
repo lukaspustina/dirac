@@ -52,7 +52,7 @@ fn main() {
         let results = dirac::engine::run(&check_suite);
 
         let report = SummaryReport::new(&results);
-        report.print();
+        println!("{}", report.as_string());
 
         if cli_args.is_present("report") && cli_args.is_present("output") {
             let report_type = cli_args.value_of("report").unwrap().to_string();
@@ -60,7 +60,7 @@ fn main() {
 
             let mut report_builder = Reporter::new(&results, &report_type);
             let report = report_builder.with_filename(&report_filename).create();
-            report.print();
+            println!("{}", report.as_string());
         }
     }
 }

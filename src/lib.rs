@@ -2,6 +2,7 @@ extern crate cpython;
 extern crate hyper;
 #[macro_use]
 extern crate log;
+extern crate rustc_serialize;
 extern crate term_painter;
 extern crate yaml_rust;
 

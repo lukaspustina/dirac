@@ -1,9 +1,12 @@
 use std::collections::HashMap;
+use std::collections::BTreeMap;
+use rustc_serialize::json::{self, ToJson, Json};
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
-use super::engine::CheckSuiteResult;
+use super::checks::*;
+use super::engine::*;
 
 pub struct Reporter<'a> {
     check_suite_result: &'a CheckSuiteResult<'a>,
@@ -41,7 +44,11 @@ pub enum ReportType {
 }
 
 pub trait Report<'a> {
-    fn print(&self);
+    fn as_string(&self) -> String;
+
+    fn write_to_file(&self) {
+        println!("{}", self.as_string());
+    }
 }
 
 pub struct JsonReport<'a> {
@@ -50,8 +57,8 @@ pub struct JsonReport<'a> {
 }
 
 impl<'a> Report<'a> for JsonReport<'a> {
-    fn print(&self) {
-        println!("Mööp: Json Report");
+    fn as_string(&self) -> String {
+        format!("{}", self.check_suite_result.to_json().pretty())
     }
 }
 
@@ -64,21 +71,60 @@ impl<'a> JsonReport<'a> {
     }
 }
 
+impl<'a > ToJson for PropertyResult<'a> {
+    fn to_json(&self) -> Json {
+        let mut d = BTreeMap::new();
+        d.insert("host".to_string(), self.host.to_json());
+        let mut property = BTreeMap::new();
+        property.insert("name".to_string(), self.property.name.to_json());
+        property.insert("module".to_string(), self.property.module.to_json());
+        property.insert("params".to_string(), self.property.params.to_json());
+        d.insert("property".to_string(), property.to_json());
+        let property_result = match &self.result {
+            &Ok(()) => "Success".to_string(),
+            &Err(ref err) => err.to_string(),
+        };
+        d.insert("property_result".to_string(), property_result.to_json());
+        Json::Object(d)
+    }
+}
+
+impl<'a > ToJson for CheckResult<'a> {
+    fn to_json(&self) -> Json {
+        let mut d = BTreeMap::new();
+        d.insert("inventory_name".to_string(), self.check.inventory_name.to_json());
+        d.insert("property_results".to_string(), self.results.to_json());
+        Json::Object(d)
+    }
+}
+
+impl<'a > ToJson for CheckSuiteResult<'a> {
+    fn to_json(&self) -> Json {
+        let mut d = BTreeMap::new();
+        d.insert("inventory".to_string(), self.check_suite.inventory.to_json());
+        d.insert("check_results".to_string(), self.results.to_json());
+        Json::Object(d)
+    }
+}
+
 
 pub struct SummaryReport<'a> {
     check_suite_result: &'a CheckSuiteResult<'a>,
 }
 
 impl<'a> Report<'a> for SummaryReport<'a> {
-    fn print(&self) {
-        println!("{}", Bold.paint("SUMMARY"));
+    // TODO: Farben werden nicht dargestellt
+    fn as_string(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("{}\n", Bold.paint("SUMMARY")));
         let summary = SummaryReport::createSummary(self.check_suite_result);
         for kv in summary {
-            println!(" * {:<30} Success {:4}, Failed {:4}",
+            s.push_str(&format!(" * {:<30} Success {:4}, Failed {:4}\n",
                      kv.0,
                      Green.paint((kv.1).0),
-                     Red.paint((kv.1).1));
+                     Red.paint((kv.1).1)));
         }
+        s
     }
 }
 

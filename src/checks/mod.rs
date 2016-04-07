@@ -5,20 +5,21 @@ use yaml_rust::{YamlLoader, Yaml};
 
 pub type Inventory = HashMap<String, Vec<String>>;
 
-#[derive(Debug)]
+#[derive(Debug, RustcEncodable)]
 pub struct Property {
     pub name: String,
     pub module: String,
     pub params: HashMap<String, String>
 }
 
-#[derive(Debug)]
+#[derive(Debug, RustcEncodable)]
 pub struct Check {
     pub inventory_name: String,
     pub properties: Vec<Property>
 }
 
 
+#[derive(Debug, RustcEncodable)]
 pub struct CheckSuite {
     pub inventory: Inventory,
     pub checks: Vec<Check>,
