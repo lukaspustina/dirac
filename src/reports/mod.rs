@@ -3,12 +3,11 @@ use std::collections::BTreeMap;
 use std::io;
 use std::io::prelude::*;
 use std::fs::File;
-use rustc_serialize::json::{self, ToJson, Json};
+use rustc_serialize::json::{ToJson, Json};
 use term_painter::ToStyle;
 use term_painter::Color::*;
 use term_painter::Attr::*;
 
-use super::checks::*;
 use super::engine::*;
 
 pub struct Reporter<'a> {
@@ -123,7 +122,7 @@ impl<'a> Report<'a> for SummaryReport<'a> {
     fn as_string(&self) -> String {
         let mut s = String::new();
         s.push_str(&format!("{}\n", Bold.paint("SUMMARY")));
-        let summary = SummaryReport::createSummary(self.check_suite_result);
+        let summary = SummaryReport::create_summary(self.check_suite_result);
         for kv in summary {
             s.push_str(&format!(" * {:<30} Success {:4}, Failed {:4}\n",
                      kv.0,
@@ -143,7 +142,7 @@ impl<'a> SummaryReport<'a> {
         SummaryReport { check_suite_result: check_suite_result }
     }
 
-    fn createSummary(check_suite_result: &'a CheckSuiteResult) -> HashMap<&'a str, (u16, u16)> {
+    fn create_summary(check_suite_result: &'a CheckSuiteResult) -> HashMap<&'a str, (u16, u16)> {
         let mut result = HashMap::new();
 
         for check in &check_suite_result.results {

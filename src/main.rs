@@ -6,13 +6,9 @@ extern crate term_painter;
 
 extern crate dirac;
 
-use clap::{Arg, ArgMatches, App};
-use std::collections::HashMap;
-use std::env;
-
+use clap::{Arg, App};
 
 use dirac::checks::CheckSuite;
-use dirac::engine::CheckSuiteResult;
 use dirac::reports::*;
 
 static VERSION: &'static str = env!("CARGO_PKG_VERSION");

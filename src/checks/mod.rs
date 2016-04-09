@@ -28,10 +28,10 @@ pub struct CheckSuite {
 impl CheckSuite {
 
     pub fn read_from_file(filename: &str) -> Option<CheckSuite> {
-        let INVENTORY = Yaml::from_str("inventory");
-        let HOSTS = Yaml::from_str("hosts");
-        let PROPERTIES = Yaml::from_str("properties");
-        let NAME = Yaml::from_str("name");
+        let key_inventory: Yaml = Yaml::from_str("inventory");
+        let key_host = Yaml::from_str("hosts");
+        let key_properties = Yaml::from_str("properties");
+        let key_name = Yaml::from_str("name");
 
         let mut f = File::open(filename).unwrap();
         let mut yaml_str = String::new();
@@ -61,9 +61,9 @@ impl CheckSuite {
 
         for hash in docs[0].as_vec().unwrap() {
             let map = hash.as_hash().unwrap();
-            if map.contains_key(&INVENTORY) {
+            if map.contains_key(&key_inventory) {
                 debug!("Found inventory: {:?}", hash);
-                let inventory_yaml = map.get(&INVENTORY).unwrap().as_hash().unwrap();
+                let inventory_yaml = map.get(&key_inventory).unwrap().as_hash().unwrap();
                 for hosts_name_yaml in inventory_yaml.keys() {
                     let hosts_name = hosts_name_yaml.as_str().unwrap().to_string();
                     let mut hosts: Vec<String> = Vec::new();
@@ -81,20 +81,20 @@ impl CheckSuite {
 
         for hash in docs[0].as_vec().unwrap() {
             let map = hash.as_hash().unwrap();
-            if map.contains_key(&INVENTORY) {
+            if map.contains_key(&key_inventory) {
             } else {
-                if map.contains_key(&HOSTS) && map.contains_key(&PROPERTIES) {
+                if map.contains_key(&key_host) && map.contains_key(&key_properties) {
                     debug!("- Found check: {:?}", hash);
-                    let inventory_name = map.get(&HOSTS).unwrap().as_str().unwrap();
+                    let inventory_name = map.get(&key_host).unwrap().as_str().unwrap();
                     let mut properties = Vec::new();
 
-                    let properties_yaml = map.get(&PROPERTIES).unwrap().as_vec().unwrap();
+                    let properties_yaml = map.get(&key_properties).unwrap().as_vec().unwrap();
                     for property_yml in properties_yaml {
                         let mut name: Option<String> = None;
                         let mut params = HashMap::new();
                         let mut module: Option<String> = None;
                         for elem in property_yml.as_hash().unwrap() {
-                            if elem.0 == &NAME {
+                            if elem.0 == &key_name {
                                 name = Some(elem.1.as_str().unwrap().to_string());
                             } else {
                                 module = Some(elem.0.as_str().unwrap().to_string());

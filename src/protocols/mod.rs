@@ -7,9 +7,9 @@ use std::time::Duration;
 use super::engine::Kwargs;
 
 pub fn raw_tcp(host: &str, port: u16) -> Result<Kwargs, Error> {
-    let mut kwargs = Kwargs::new();
+    let kwargs = Kwargs::new();
 
-    let mut stream = try!(TcpStream::connect((host, port)));
+    let _ = try!(TcpStream::connect((host, port)));
 
     Ok(kwargs)
 }
@@ -18,12 +18,12 @@ pub fn text_udp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwar
     let mut kwargs = Kwargs::new();
 
     let dur = Duration::new(5, 0);
-    let mut socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
+    let socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
     socket.set_read_timeout(Some(dur)).unwrap();
 
     if let Some(c) = challenge {
         let tx_buf = c.as_bytes();
-        let tx_len = tx_buf.len();
+        let _  = tx_buf.len();
         try!(socket.send_to(tx_buf, (host, port)));
     };
 
