@@ -6,7 +6,7 @@ import re
 class Module(text_tcp.Module):
 
     @classmethod
-    def check_args(cls, port, software, return_code):
+    def check_args(cls, port, software, proxy, return_code):
         try:
             n = int(port)
             if n < 1 or n > 0xFFFF: raise ValueError()
@@ -19,20 +19,29 @@ class Module(text_tcp.Module):
             raise InvalidArgumentError('software', software, "is not a valid regular expression")
 
         try:
-            n = int(return_code)
-            if n < 1 or n > 0xFFFF: raise ValueError()
+            b = bool(proxy)
         except ValueError as err:
-            raise InvalidArgumentError('return_code', return_code, "is not a vaild port number")
+            raise InvalidArgumentError('proxy', proxy, "is not a bool")
+
+        try:
+            n = int(return_code)
+            if n < 100 or n > 600: raise ValueError()
+        except ValueError as err:
+            raise InvalidArgumentError('return_code', return_code, "is not a vaild return code")
 
         return True
 
-    def __init__(self, port, software, return_code):
+    def __init__(self, port, software, proxy, return_code):
         self.port = int(port)
         self.software = re.compile(software)
+        self.proxy = bool(proxy)
         self.return_code = int(return_code)
 
     def challenge(self):
-        return "quit"
+        challenge_str = ""
+        if self.proxy: challenge_str += "PROXY TCP4 127.0.0.1 127.0.0.1 63322 25\n"
+        challenge_str += "quit\n"
+        return challenge_str
 
     def check_response(self, response):
         try:

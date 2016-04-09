@@ -45,10 +45,10 @@
 - hosts: controllers
   properties:
     - name: Check SMTP Proxy
-      smtp_proxy: { port: 25, software: ".*Postfix.*", return_code: 220 }
+      smtp: { port: 25, software: ".*Postfix.*", proxy: True, return_code: 220 }
 
 - hosts: ha
   properties:
     - name: Check SMTP
-      smtp: { port: 25, software: ".*Postfix.*", return_code: 220 }
+      smtp: { port: 25, software: ".*Postfix.*", proxy: False, return_code: 220 }
 
