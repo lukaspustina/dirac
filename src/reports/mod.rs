@@ -1,9 +1,16 @@
 pub mod json;
+pub mod md;
 
 use std::io;
 
-use super::engine::*;
-use self::json::*;
+use super::engine::CheckSuiteResult;
+use self::json::JsonReport;
+use self::md::MarkdownReport;
+
+pub enum ReportType {
+    Json,
+    Markdown
+}
 
 pub struct Reporter<'a> {
     check_suite_result: &'a CheckSuiteResult<'a>,
@@ -15,6 +22,7 @@ impl<'a> Reporter<'a> {
     pub fn new(check_suite_result: &'a CheckSuiteResult, report_type_str: &'a str) -> Reporter<'a> {
         let report_type = match report_type_str {
             "json" => ReportType::Json,
+            "markdown" => ReportType::Markdown,
             _ => panic!("Mööp"),
         };
         Reporter {
@@ -29,15 +37,18 @@ impl<'a> Reporter<'a> {
         self
     }
 
-    pub fn create(&self) -> JsonReport<'a> {
+    pub fn create(&self) -> Box<Report<'a> + 'a> {
         match self.report_type {
-            ReportType::Json => JsonReport::new(self.check_suite_result, self.filename.unwrap()),
+            ReportType::Json => {
+                let report = JsonReport::new(self.check_suite_result, self.filename.unwrap());
+                Box::new(report)
+            },
+            ReportType::Markdown => {
+                let report = MarkdownReport::new(self.check_suite_result, self.filename.unwrap());
+                Box::new(report)
+            }
         }
     }
-}
-
-pub enum ReportType {
-    Json,
 }
 
 pub trait Report<'a> {

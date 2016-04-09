@@ -12,6 +12,15 @@ pub struct JsonReport<'a> {
     filename: &'a str,
 }
 
+impl<'a> JsonReport<'a> {
+    pub fn new(check_suite_result: &'a CheckSuiteResult, filename: &'a str) -> JsonReport<'a> {
+        JsonReport {
+            check_suite_result: check_suite_result,
+            filename: filename,
+        }
+    }
+}
+
 impl<'a> Report<'a> for JsonReport<'a> {
     fn as_string(&self) -> String {
         format!("{}", self.check_suite_result.to_json().pretty())
@@ -20,15 +29,6 @@ impl<'a> Report<'a> for JsonReport<'a> {
     fn write_to_file(&self) -> io::Result<()> {
         let mut f = try!(File::create(self.filename));
         f.write_all(self.as_string().as_bytes())
-    }
-}
-
-impl<'a> JsonReport<'a> {
-    pub fn new(check_suite_result: &'a CheckSuiteResult, filename: &'a str) -> JsonReport<'a> {
-        JsonReport {
-            check_suite_result: check_suite_result,
-            filename: filename,
-        }
     }
 }
 

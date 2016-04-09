@@ -27,7 +27,7 @@ fn main() {
                        .arg(Arg::with_name("report")
                                 .takes_value(true)
                                 .requires("output")
-                                .possible_values(&["json"])
+                                .possible_values(&["json", "markdown"])
                                 .short("r")
                                 .long("report")
                                 .value_name("REPORT")
