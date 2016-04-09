@@ -60,7 +60,7 @@ fn main() {
 
             let mut report_builder = Reporter::new(&results, &report_type);
             let report = report_builder.with_filename(&report_filename).create();
-            println!("{}", report.as_string());
+            let _ = report.write_to_file();
         }
     }
 }

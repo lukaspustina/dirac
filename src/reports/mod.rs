@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 use std::collections::BTreeMap;
+use std::io;
+use std::io::prelude::*;
+use std::fs::File;
 use rustc_serialize::json::{self, ToJson, Json};
 use term_painter::ToStyle;
 use term_painter::Color::*;
@@ -46,9 +49,7 @@ pub enum ReportType {
 pub trait Report<'a> {
     fn as_string(&self) -> String;
 
-    fn write_to_file(&self) {
-        println!("{}", self.as_string());
-    }
+    fn write_to_file(&self) -> io::Result<()>;
 }
 
 pub struct JsonReport<'a> {
@@ -59,6 +60,11 @@ pub struct JsonReport<'a> {
 impl<'a> Report<'a> for JsonReport<'a> {
     fn as_string(&self) -> String {
         format!("{}", self.check_suite_result.to_json().pretty())
+    }
+
+    fn write_to_file(&self) -> io::Result<()> {
+        let mut f = try!(File::create(self.filename));
+        f.write_all(self.as_string().as_bytes())
     }
 }
 
@@ -125,6 +131,10 @@ impl<'a> Report<'a> for SummaryReport<'a> {
                      Red.paint((kv.1).1)));
         }
         s
+    }
+
+    fn write_to_file(&self) -> io::Result<()> {
+        panic!("Not implemented");
     }
 }
 
