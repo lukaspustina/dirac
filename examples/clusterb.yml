@@ -1,0 +1,54 @@
+# vim: set ft=yaml:
+---
+- inventory:
+    all:
+      - control01.baremetal
+      - control02.baremetal
+      - node01.baremetal
+      - node02.baremetal
+      - node03.baremetal
+      - node04.baremetal
+      - node05.baremetal
+      - node06.baremetal
+      - node07.baremetal
+      - node08.baremetal
+      - node09.baremetal
+      - node10.baremetal
+    controllers:
+      - control01.baremetal
+      - control02.baremetal
+    ha:
+      - ha01.baremetal
+    storage-nodes:
+      - node01.baremetal
+      - node02.baremetal
+      - node03.baremetal
+      - node04.baremetal
+    galera-nodes:
+      - node01.baremetal
+      - node02.baremetal
+      - node03.baremetal
+    compute-nodes:
+      - node05.baremetal
+      - node06.baremetal
+      - node07.baremetal
+      - node08.baremetal
+      - node09.baremetal
+      - node10.baremetal
+
+
+#- hosts: all
+#  properties:
+#    - name: Check SSH
+#      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
+#
+- hosts: controllers
+  properties:
+    - name: Check SMTP Proxy
+      smtp_proxy: { port: 25, software: ".*Postfix.*", return_code: 220 }
+
+- hosts: ha
+  properties:
+    - name: Check SMTP
+      smtp: { port: 25, software: ".*Postfix.*", return_code: 220 }
+

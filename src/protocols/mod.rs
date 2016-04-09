@@ -43,6 +43,7 @@ pub fn text_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwar
         let tx_res = try!(stream.write(&challenge_bytes));
         // TODO: Assert to real check
         assert_eq!(tx_res, challenge_bytes.len());
+        debug!("- Sent challenge '{}'.", challenge);
     }
 
     let mut response_bytes = [0; 1024];
