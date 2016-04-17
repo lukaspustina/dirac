@@ -35,20 +35,69 @@
       - node08.baremetal
       - node09.baremetal
       - node10.baremetal
+    elastic-servers:
+      - node08.baremetal
+      - node09.baremetal
+      - node10.baremetal
 
 
-#- hosts: all
-#  properties:
-#    - name: Check SSH
-#      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
-#
+- hosts: all
+  properties:
+    - name: Check SSH
+      ssh: { port: 22, version: 2.0, software: "OpenSSH.*" }
+
 - hosts: controllers
   properties:
     - name: Check SMTP Proxy
       smtp: { port: 25, software: ".*Postfix.*", proxy: True, return_code: 220 }
+    - name: Check DNS via UDP
+      dns_udp:
+        port: 53
+    - name: Check for Webserver Redirect
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 301
+    - name: Check for Webserver via SSL Redirect
+      https:
+        port: 443
+        verb: GET
+        uri: /
+        response_code: 301
 
 - hosts: ha
   properties:
     - name: Check SMTP
       smtp: { port: 25, software: ".*Postfix.*", proxy: False, return_code: 220 }
+    - name: Check DNS via UDP
+      dns_udp:
+        port: 53
+    - name: Check for Webserver Redirect
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 301
+    - name: Check for Webserver via SSL Redirect
+      https:
+        port: 443
+        verb: GET
+        uri: /
+        response_code: 301
+    - name: Check for ElasticSearch via HTTP
+      http:
+        port: 9200
+        verb: GET
+        uri: /
+        response_code: 200
+
+- hosts: elastic-servers
+  properties:
+    - name: Check for ElasticSearch via HTTP
+      http:
+        port: 9200
+        verb: GET
+        uri: /
+        response_code: 200
 
