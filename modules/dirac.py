@@ -1,3 +1,5 @@
+import re
+
 class Dirac(object):
 
     _module_protocol = ""
@@ -43,4 +45,25 @@ class ResponeCheckError(Error):
 
     def __str__(self):
         return self.message
+
+
+def is_valid_number(number, minimum, maximum, name="number", msg="is not a valid number"):
+    try:
+        n = int(number)
+        if n < minimum or n > maximum: raise ValueError()
+    except ValueError as err:
+        raise InvalidArgumentError(name, number, msg)
+
+
+def is_valid_port_number(port):
+    is_valid_number(port, 1, 0xFFFF, "port", "is not valid port number")
+
+
+def is_valid_regex(regex, name, msg="is not a valid regular expression"):
+    try:
+        re.compile(regex)
+    except re.error:
+        raise InvalidArgumentError(name, regex, msg)
+
+    return True
 

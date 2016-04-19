@@ -1,4 +1,4 @@
-from dirac import Dirac
+from dirac import *
 
 class Module(Dirac):
 
@@ -6,11 +6,7 @@ class Module(Dirac):
 
     @classmethod
     def check_args(cls, port):
-        try:
-            n = int(port)
-            if n < 1 or n > 0xFFFF: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('port', port, "is not a vaild port number")
+        is_valid_port_number(port)
 
         return True
 

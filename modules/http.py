@@ -9,25 +9,22 @@ class Module(text_tcp.Module):
 
     @classmethod
     def check_args(cls, port, verb, uri, response_code):
-        try:
-            n = int(port)
-            if n < 1 or n > 0xFFFF: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('port', port, "is not a vaild port number")
+        is_valid_port_number(port)
+        Module._is_valid_http_verb(verb)
+        Module._is_valid_uri(uri)
+        is_valid_number(response_code, 1, 599, "response_code", "is not a vaild HTTP response code")
 
+        return True
+
+    @classmethod
+    def _is_valid_http_verb(self, verb):
         if verb.upper() not in ['GET', ]:
             raise InvalidArgumentError('verb', verb, "is not a vaild HTTP verb")
 
+    @classmethod
+    def _is_valid_uri(self, uri):
         if uri == "":
             raise InvalidArgumentError('uri', uri, "is not a vaild URI")
-
-        try:
-            n = int(response_code)
-            if n < 1 or n > 599: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('response_code', response_code, "is not a vaild HTTP response code")
-
-        return True
 
     def __init__(self, port, verb, uri, response_code):
         self.port = port

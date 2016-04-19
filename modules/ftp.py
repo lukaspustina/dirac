@@ -1,25 +1,14 @@
 import text_tcp
 from dirac import *
 
-import re
-
 class Module(text_tcp.Module):
 
     _module_protocol = "text/tcp"
 
     @classmethod
     def check_args(cls, port, response_code):
-        try:
-            n = int(port)
-            if n < 1 or n > 0xFFFF: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('port', port, "is not a vaild port number")
-
-        try:
-            n = int(response_code)
-            if n < 1 or n > 699: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('response_code', response_code, "is not a vaild FTPresponse code")
+        is_valid_port_number(port)
+        is_valid_number(response_code, 1, 699, "response_code", "is not a vaild FTP response code")
 
         return True
 
@@ -31,7 +20,8 @@ class Module(text_tcp.Module):
         try:
             response_code_str = response.split(" ")[0]
             response_code = int(response_code_str)
-            if response_code != self.response_code: raise ResponeCheckError("Unexpected response code '%d'; expected '%d'." % (response_code, self.response_code))
+            if response_code != self.response_code:
+                raise ResponeCheckError("Unexpected response code '%d'; expected '%d'." % (response_code, self.response_code))
         except ValueError:
             raise ResponeCheckError("Invalid response code '%d' in repsonse." % response_code)
 

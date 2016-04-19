@@ -7,16 +7,8 @@ class Module(text_tcp.Module):
 
     @classmethod
     def check_args(cls, port, version, software):
-        try:
-            n = int(port)
-            if n < 1 or n > 0xFFFF: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('port', port, "is not a vaild port number")
-
-        try:
-            re.compile(software)
-        except re.error:
-            raise InvalidArgumentError('software', software, "is not a valid regular expression")
+        is_valid_port_number(port)
+        is_valid_regex(software, "software")
 
         return True
 

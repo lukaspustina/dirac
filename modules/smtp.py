@@ -7,27 +7,13 @@ class Module(text_tcp.Module):
 
     @classmethod
     def check_args(cls, port, software, proxy, return_code):
-        try:
-            n = int(port)
-            if n < 1 or n > 0xFFFF: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('port', port, "is not a vaild port number")
-
-        try:
-            re.compile(software)
-        except re.error:
-            raise InvalidArgumentError('software', software, "is not a valid regular expression")
-
+        is_valid_port_number(port)
+        is_valid_regex(software, "software")
         try:
             b = bool(proxy)
         except ValueError as err:
             raise InvalidArgumentError('proxy', proxy, "is not a bool")
-
-        try:
-            n = int(return_code)
-            if n < 100 or n > 600: raise ValueError()
-        except ValueError as err:
-            raise InvalidArgumentError('return_code', return_code, "is not a vaild return code")
+        is_valid_number(return_code, 100, 600, "return_code", "is not a vaild return code")
 
         return True
 
@@ -46,8 +32,10 @@ class Module(text_tcp.Module):
     def check_response(self, response):
         try:
             return_code = int(re.split('-| ', response)[0])
-            if self.return_code != return_code: raise ResponeCheckError("Unexpected result code '%d'; expected '%d'." % (return_code, self.return_code))
-            if self.software.match(response) is None: raise ResponeCheckError("Unexpected software version '%s'; expected to match against '%s'." % (response, self.software))
+            if self.return_code != return_code:
+                raise ResponeCheckError("Unexpected result code '%d'; expected '%d'." % (return_code, self.return_code))
+            if self.software.match(response) is None:
+                raise ResponeCheckError("Unexpected software version '%s'; expected to match against '%s'." % (response, self.software))
         except ValueError:
             raise ResponeCheckError("Invalid identification string '%s' in repsonse." % response)
 
