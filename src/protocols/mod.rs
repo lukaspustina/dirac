@@ -1,5 +1,4 @@
 use hyper::client::{Client, RedirectPolicy};
-use hyper::header::Headers;
 use std::collections::HashMap;
 use std::io::Error;
 use std::io::prelude::*;
@@ -35,13 +34,13 @@ impl<'a> Protocol<'a, TcpConnect<'a>, NoData, TcpConnectResponse> for TcpConnect
         })
     }
 
-    fn with_data(mut self: Self, data: NoData) -> TcpConnect<'a> {
+    fn with_data(self: Self, _: NoData) -> TcpConnect<'a> {
         self
     }
 
     fn send_challenge(self: &Self) -> Result<TcpConnectResponse, Error> {
         let TcpConnect(ref challenge) = *self;
-        let mut stream = try!(TcpStream::connect((challenge.host, challenge.port)));
+        let _ = try!(TcpStream::connect((challenge.host, challenge.port)));
 
         Ok(TcpConnectResponse(()))
     }

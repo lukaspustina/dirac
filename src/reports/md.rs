@@ -3,7 +3,7 @@ use std::io;
 use std::io::prelude::*;
 use std::fs::File;
 
-use super::super::engine::{CheckResult, CheckSuiteResult, PropertyResult};
+use super::super::engine::{CheckSuiteResult, PropertyResult};
 use super::Report;
 
 pub struct MarkdownReport<'a> {

@@ -140,7 +140,7 @@ impl TcpRawResponse {
         let TcpRawResponse(response) = self;
         let py_dict = PyDict::new(py);
         let py_bytes = response.to_py_object(py);
-        py_dict.set_item(py, "response", py_bytes);
+        let _ = py_dict.set_item(py, "response", py_bytes);
         py_dict
     }
 }
@@ -150,7 +150,7 @@ impl TcpTextResponse {
         let TcpTextResponse(response) = self;
         let py_dict = PyDict::new(py);
         let py_string = response.to_py_object(py);
-        py_dict.set_item(py, "response", py_string);
+        let _ = py_dict.set_item(py, "response", py_string);
         py_dict
     }
 }
@@ -160,13 +160,13 @@ impl TcpHttpTextResponse {
         let TcpHttpTextResponse(response) = self;
         let py_dict = PyDict::new(py);
         let py_response_code = response.response_code.to_py_object(py);
-        py_dict.set_item(py, "response_code", py_response_code);
+        let _ = py_dict.set_item(py, "response_code", py_response_code);
         // TODO: Implement me
         // let py_headers = self.data.headers.to_py_object(py);
         // py_dict.set_item(py, "headers", py_headers);
-        py_dict.set_item(py, "headers", py.None());
+        let _ = py_dict.set_item(py, "headers", py.None());
         let py_body = response.body.to_py_object(py);
-        py_dict.set_item(py, "body", py_body);
+        let _ = py_dict.set_item(py, "body", py_body);
         py_dict
     }
 }
@@ -198,8 +198,8 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
     let port = property.params["port"].parse::<u16>().unwrap();
     let result = match &protocol[..] {
         "connect/tcp" => {
-            let mut p = TcpConnect::new(host, port);
-            if let Ok(response) = p.send_challenge() {
+            let p = TcpConnect::new(host, port);
+            if let Ok(_) = p.send_challenge() {
                 true
             } else {
                 return Err(PropertyError::FailedExecution)
@@ -224,13 +224,14 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             }
             let result = p.send_challenge();
             if result.is_ok() {
-                let response: TcpTextResponse = result.unwrap();
+                let response = result.unwrap();
                 let kwargs = response.to_py_object(py);
                 try!(check_response(py, &instance, &kwargs))
             } else {
                 return Err(PropertyError::FailedExecution)
             }
         },
+        // TODO: make me newstyle protocol
         "text/udp" => if let Ok(kwargs) = text_udp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             let r: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
             r
@@ -238,7 +239,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             return Err(PropertyError::FailedExecution)
         },
         "http/tcp" => {
-            let mut p = TcpHttp::new(host, port).with_data(string_from(py, py_challenge));
+            let p = TcpHttp::new(host, port).with_data(string_from(py, py_challenge));
             let result = p.send_challenge();
             if result.is_ok() {
                 let response = result.unwrap();
@@ -248,6 +249,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
                 return Err(PropertyError::FailedExecution)
             }
         },
+        // TODO: make me newstyle protocol
         "https/tcp" => if let Ok(kwargs) = https_tcp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
             let r: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
             r
