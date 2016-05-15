@@ -1,5 +1,5 @@
-use cpython::{PyBytes, PyDict, PyObject, PyString, Python, NoArgs, ToPyObject};
 use cpython::ObjectProtocol; //for call method
+use cpython::{PyBytes, PyDict, PyErr, PyObject, PyString, Python, NoArgs, ToPyObject};
 use std::collections::HashMap;
 use std::fmt;
 use term_painter::ToStyle;
@@ -15,19 +15,27 @@ pub type Results<'a> = HashMap<&'a str, (u16,u16)>;
 
 #[derive(Debug)]
 pub enum PropertyError {
-    FailedResponseCheck,
     FailedExecution,
+    FailedResponseCheck,
+    FailedPythonCall(PyErr),
     Unclassified,
 }
 
 impl fmt::Display for PropertyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let err_name = match self {
-            &PropertyError::FailedResponseCheck => "FailedResponseCheck",
-            &PropertyError::FailedExecution => "FailedExecution",
-            &PropertyError::Unclassified => "Unclassified",
+            &PropertyError::FailedExecution => "FailedExecution".to_string(),
+            &PropertyError::FailedResponseCheck => "FailedResponseCheck".to_string(),
+            &PropertyError::FailedPythonCall(ref err) => format!("{:?}", err),
+            &PropertyError::Unclassified => "Unclassified".to_string(),
         };
         write!(f, "{}", err_name)
+    }
+}
+
+impl From<PyErr> for PropertyError {
+    fn from(err: PyErr) -> PropertyError {
+        PropertyError::FailedPythonCall(err)
     }
 }
 
@@ -81,13 +89,27 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
             for host in check_suite.inventory.get(&check.inventory_name).unwrap() {
                 debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
                 let result = execute_module(py, host, &property);
-                let property_result = PropertyResult { host: host, property: &property, result: result };
 
-                if property_result.result.is_ok() {
-                    println!("    {:>7}: [{}]", Green.paint("Success"), host);
-                } else {
-                    println!("    {:>7}: [{}]", Red.paint("Failed"), host);
+                match result {
+                    Ok(_) =>  println!("    {:>11}: [{}]", Green.paint("Success"), host),
+                    Err(ref err) => {
+                        match *err {
+                            PropertyError::FailedExecution     => println!("    {:>11}: [{}]", Red.paint("Failed (E)"), host),
+                            PropertyError::FailedResponseCheck => println!("    {:>11}: [{}]", Red.paint("Failed (R)"), host),
+                            PropertyError::FailedPythonCall(ref py_err) => {
+                                println!("    {:>11}: [{}]", Red.paint("Failed (P)"), host);
+                                // TODO: Make me configurable
+                                if (true) {
+                                    // TODO: Destructure and pretty print me
+                                    println!("{:?}", py_err);
+                                }
+                            }
+                            PropertyError::Unclassified   => println!("    {:>11}: [{}]", Red.paint("Failed (?)"), host),
+                        }
+                    },
                 }
+
+                let property_result = PropertyResult { host: host, property: &property, result: result };
 
                 check_result.results.push(property_result);
             }
@@ -150,22 +172,22 @@ impl TcpHttpTextResponse {
 }
 
 fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(), PropertyError> {
-    let import = py.import(&property.module).unwrap();
-    let module: PyObject = import.get(py, "Module").unwrap();
+    let import = try!(py.import(&property.module));
+    let module: PyObject = try!(import.get(py, "Module"));
     info!("* Loaded module '{}'.", &property.name);
 
-    let protocol_fn = module.getattr(py, "protocol").unwrap();
-    let protocol: String = protocol_fn.call(py, NoArgs, None).unwrap().extract(py).unwrap();
+    let protocol_fn = try!(module.getattr(py, "protocol"));
+    let protocol: String = try!(protocol_fn.call(py, NoArgs, None)).extract(py).unwrap();
     debug!("- Module protocol is '{}'.", protocol);
 
-    let check_args_fn = module.getattr(py, "check_args").unwrap();
-    let check_args: bool = check_args_fn.call(py, NoArgs, Some(&property.params.to_py_object(py))).unwrap().extract(py).unwrap();
+    let check_args_fn = try!(module.getattr(py, "check_args"));
+    let check_args: bool = try!(check_args_fn.call(py, NoArgs, Some(&property.params.to_py_object(py)))).extract(py).unwrap();
     debug!("- Module check args is '{}'.", check_args);
 
-    let instance: PyObject = module.call(py, NoArgs, Some(&property.params.to_py_object(py))).unwrap().extract(py).unwrap();
+    let instance: PyObject = try!(module.call(py, NoArgs, Some(&property.params.to_py_object(py)))).extract(py).unwrap();
     debug!("- Module instance is '{}'.", instance);
 
-    let py_challenge: PyObject = instance.call_method(py, "challenge", NoArgs, None).unwrap();
+    let py_challenge: PyObject = try!(instance.call_method(py, "challenge", NoArgs, None));
     let py_none = py.None();
     let challenge: Option<String> = if py_challenge == py_none {
         None
@@ -190,7 +212,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             }
             if let Ok(response) = p.send_challenge() {
                 let kwargs = response.to_py_object(py);
-                check_response(py, &instance, &kwargs)
+                try!(check_response(py, &instance, &kwargs))
             } else {
                 return Err(PropertyError::FailedExecution)
             }
@@ -204,7 +226,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             if result.is_ok() {
                 let response: TcpTextResponse = result.unwrap();
                 let kwargs = response.to_py_object(py);
-                check_response(py, &instance, &kwargs)
+                try!(check_response(py, &instance, &kwargs))
             } else {
                 return Err(PropertyError::FailedExecution)
             }
@@ -221,7 +243,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             if result.is_ok() {
                 let response = result.unwrap();
                 let kwargs = response.to_py_object(py);
-                check_response(py, &instance, &kwargs)
+                try!(check_response(py, &instance, &kwargs))
             } else {
                 return Err(PropertyError::FailedExecution)
             }
@@ -243,9 +265,9 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
     }
 }
 
-fn check_response(py: Python, instance: &PyObject, response: &PyDict) -> bool {
-    let r: bool = instance.call_method(py, "check_response", NoArgs, Some(response)).unwrap().extract(py).unwrap();
-    r
+fn check_response(py: Python, instance: &PyObject, response: &PyDict) -> Result<bool, PyErr> {
+    let r: bool = try!(instance.call_method(py, "check_response", NoArgs, Some(response))).extract(py).unwrap();
+    Ok(r)
 }
 
 
