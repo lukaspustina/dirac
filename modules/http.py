@@ -35,7 +35,7 @@ class Module(text_tcp.Module):
     def challenge(self):
         return "%s %s" % (self.verb, self.uri)
 
-    def check_response(self, response_code, header, body):
+    def check_response(self, response_code, headers, body):
         try:
             response_code = int(response_code)
             if response_code != self.response_code: raise ResponeCheckError("Unexpected response code '%d'; expected '%d'." % (response_code, self.response_code))

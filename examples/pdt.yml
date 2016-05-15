@@ -22,13 +22,13 @@
 - hosts: fritz_box
   properties:
     - name: DNS TCP
-      raw_tcp:
+      connect_tcp:
         port: 53
     - name: DNS UDP
       dns_udp:
         port: 53
     - name: SIP TCP
-      raw_tcp:
+      connect_tcp:
         port: 5060
     - name: Check for HTTP
       http:
@@ -53,25 +53,25 @@
 - hosts: esel
   properties:
     - name: NetBios TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 139
     - name: SNMP TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 161
     - name: Microsoft DS TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 445
     - name: Apple File Protocol TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 548
     - name: RSync TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 873
     - name: RSync TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 873
     - name: UPNP TCP Port
-      raw_tcp:
+      connect_tcp:
         port: 5000
     - name: Check HTTP Redirect to HTTPS
       http:
