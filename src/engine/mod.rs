@@ -11,7 +11,7 @@ use super::protocols::*;
 
 pub type Kwargs = HashMap<String, String>;
 
-pub type Results<'a> = HashMap<&'a str, (u16,u16)>;
+pub type Results<'a> = HashMap<&'a str, (u16, u16)>;
 
 #[derive(Debug)]
 pub enum PropertyError {
@@ -43,18 +43,21 @@ impl From<PyErr> for PropertyError {
 pub struct PropertyResult<'a> {
     pub host: &'a str,
     pub property: &'a Property,
-    pub result: Result<(), PropertyError>
+    pub result: Result<(), PropertyError>,
 }
 
 #[derive(Debug)]
 pub struct CheckResult<'a> {
     pub check: &'a Check,
-    pub results: Vec<PropertyResult<'a>>
+    pub results: Vec<PropertyResult<'a>>,
 }
 
 impl<'a> CheckResult<'a> {
     pub fn new(check: &'a Check) -> CheckResult {
-        CheckResult { check: check, results: Vec::new() }
+        CheckResult {
+            check: check,
+            results: Vec::new(),
+        }
     }
 }
 
@@ -66,7 +69,10 @@ pub struct CheckSuiteResult<'a> {
 
 impl<'a> CheckSuiteResult<'a> {
     pub fn new(check_suite: &'a CheckSuite) -> CheckSuiteResult {
-        CheckSuiteResult { check_suite: check_suite, results: Vec::new() }
+        CheckSuiteResult {
+            check_suite: check_suite,
+            results: Vec::new(),
+        }
     }
 }
 
@@ -85,17 +91,28 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
         let mut check_result = CheckResult::new(&check);
 
         for property in &check.properties {
-            println!("  PROPERTY: {} [{}:{}]", property.name, Bold.paint(&property.module), &property.params.get("port").unwrap());
+            println!("  PROPERTY: {} [{}:{}]",
+                     property.name,
+                     Bold.paint(&property.module),
+                     &property.params.get("port").unwrap());
             for host in check_suite.inventory.get(&check.inventory_name).unwrap() {
-                debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.", property.name, property.module, property.params, host);
+                debug!("+ Running: '{}' with module '{}' and params '{:?}' for host '{}'.",
+                       property.name,
+                       property.module,
+                       property.params,
+                       host);
                 let result = execute_module(py, host, &property);
 
                 match result {
-                    Ok(_) =>  println!("    {:>11}: [{}]", Green.paint("Success"), host),
+                    Ok(_) => println!("    {:>11}: [{}]", Green.paint("Success"), host),
                     Err(ref err) => {
                         match *err {
-                            PropertyError::FailedExecution     => println!("    {:>11}: [{}]", Red.paint("Failed (E)"), host),
-                            PropertyError::FailedResponseCheck => println!("    {:>11}: [{}]", Red.paint("Failed (R)"), host),
+                            PropertyError::FailedExecution => {
+                                println!("    {:>11}: [{}]", Red.paint("Failed (E)"), host)
+                            }
+                            PropertyError::FailedResponseCheck => {
+                                println!("    {:>11}: [{}]", Red.paint("Failed (R)"), host)
+                            }
                             PropertyError::FailedPythonCall(ref py_err) => {
                                 println!("    {:>11}: [{}]", Red.paint("Failed (P)"), host);
                                 // TODO: Make me configurable
@@ -104,12 +121,18 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
                                     println!("{:?}", py_err);
                                 }
                             }
-                            PropertyError::Unclassified   => println!("    {:>11}: [{}]", Red.paint("Failed (?)"), host),
+                            PropertyError::Unclassified => {
+                                println!("    {:>11}: [{}]", Red.paint("Failed (?)"), host)
+                            }
                         }
-                    },
+                    }
                 }
 
-                let property_result = PropertyResult { host: host, property: &property, result: result };
+                let property_result = PropertyResult {
+                    host: host,
+                    property: &property,
+                    result: result,
+                };
 
                 check_result.results.push(property_result);
             }
@@ -122,22 +145,73 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
     check_suite_result
 }
 
-fn vec_from(py: Python, po: PyObject) -> Vec<u8> {
-    let b = po.extract::<PyBytes>(py).unwrap();
-    let s = b.as_slice(py);
-    let v = From::from(&s[..]);
-    v
+trait ToData<T> {
+    fn to_data(py: Python, po: PyObject) -> Option<T>;
 }
+
+impl<'a> ToData<NoData> for TcpConnect<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<NoData> {
+        None
+    }
+}
+
+impl<'a> ToData<Vec<u8>> for TcpRaw<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<Vec<u8>> {
+        let py_none = py.None();
+        if po != py_none {
+            let b = po.extract::<PyBytes>(py).unwrap();
+            let s = b.as_slice(py);
+            let v = From::from(&s[..]);
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ToData<String> for TcpText<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<String> {
+        let py_none = py.None();
+        if po != py_none {
+            let s = string_from(py, po);
+            Some(s)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ToData<String> for TcpHttp<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<String> {
+        let py_none = py.None();
+        if po != py_none {
+            let s = string_from(py, po);
+            Some(s)
+        } else {
+            None
+        }
+    }
+}
+
 
 fn string_from(py: Python, po: PyObject) -> String {
     let s = po.extract::<PyString>(py).unwrap().to_string(py).unwrap().to_string();
     s
 }
 
+trait ToDict {
+    fn to_dict(py: Python, response: Self) -> PyDict;
+}
 
-impl TcpRawResponse {
-    fn to_py_object(self: Self, py: Python) -> PyDict {
-        let TcpRawResponse(response) = self;
+impl ToDict for TcpConnectResponse {
+    fn to_dict(py: Python, response: TcpConnectResponse) -> PyDict {
+        PyDict::new(py)
+    }
+}
+
+impl ToDict for TcpRawResponse {
+    fn to_dict(py: Python, response: TcpRawResponse) -> PyDict {
+        let TcpRawResponse(response) = response;
         let py_dict = PyDict::new(py);
         let py_bytes = response.to_py_object(py);
         let _ = py_dict.set_item(py, "response", py_bytes);
@@ -145,9 +219,9 @@ impl TcpRawResponse {
     }
 }
 
-impl TcpTextResponse {
-    fn to_py_object(self: Self, py: Python) -> PyDict {
-        let TcpTextResponse(response) = self;
+impl ToDict for TcpTextResponse {
+    fn to_dict(py: Python, response: TcpTextResponse) -> PyDict {
+        let TcpTextResponse(response) = response;
         let py_dict = PyDict::new(py);
         let py_string = response.to_py_object(py);
         let _ = py_dict.set_item(py, "response", py_string);
@@ -155,9 +229,9 @@ impl TcpTextResponse {
     }
 }
 
-impl TcpHttpTextResponse {
-    fn to_py_object(self: Self, py: Python) -> PyDict {
-        let TcpHttpTextResponse(response) = self;
+impl ToDict for TcpHttpTextResponse {
+    fn to_dict(py: Python, response: TcpHttpTextResponse) -> PyDict {
+        let TcpHttpTextResponse(response) = response;
         let py_dict = PyDict::new(py);
         let py_response_code = response.response_code.to_py_object(py);
         let _ = py_dict.set_item(py, "response_code", py_response_code);
@@ -181,10 +255,16 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
     debug!("- Module protocol is '{}'.", protocol);
 
     let check_args_fn = try!(module.getattr(py, "check_args"));
-    let check_args: bool = try!(check_args_fn.call(py, NoArgs, Some(&property.params.to_py_object(py)))).extract(py).unwrap();
+    let check_args: bool = try!(check_args_fn.call(py,
+                                                   NoArgs,
+                                                   Some(&property.params.to_py_object(py))))
+                               .extract(py)
+                               .unwrap();
     debug!("- Module check args is '{}'.", check_args);
 
-    let instance: PyObject = try!(module.call(py, NoArgs, Some(&property.params.to_py_object(py)))).extract(py).unwrap();
+    let instance: PyObject = try!(module.call(py, NoArgs, Some(&property.params.to_py_object(py))))
+                                 .extract(py)
+                                 .unwrap();
     debug!("- Module instance is '{}'.", instance);
 
     let py_challenge: PyObject = try!(instance.call_method(py, "challenge", NoArgs, None));
@@ -199,64 +279,58 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
     let result = match &protocol[..] {
         "connect/tcp" => {
             let p = TcpConnect::new(host, port);
-            if let Ok(_) = p.send_challenge() {
-                true
-            } else {
-                return Err(PropertyError::FailedExecution)
-            }
-        },
+            try!(run_protocol(py, p, instance, None))
+        }
         "raw/tcp" => {
             let mut p = TcpRaw::new(host, port);
-            if challenge.is_some() {
-                p = p.with_data(vec_from(py, py_challenge));
-            }
-            if let Ok(response) = p.send_challenge() {
-                let kwargs = response.to_py_object(py);
-                try!(check_response(py, &instance, &kwargs))
-            } else {
-                return Err(PropertyError::FailedExecution)
-            }
-        },
+            let challenge = TcpRaw::to_data(py, py_challenge);
+            try!(run_protocol(py, p, instance, challenge))
+        }
         "text/tcp" => {
             let mut p = TcpText::new(host, port);
-            if challenge.is_some() {
-                p = p.with_data(string_from(py, py_challenge));
-            }
-            let result = p.send_challenge();
-            if result.is_ok() {
-                let response = result.unwrap();
-                let kwargs = response.to_py_object(py);
-                try!(check_response(py, &instance, &kwargs))
-            } else {
-                return Err(PropertyError::FailedExecution)
-            }
-        },
+            let challenge = TcpText::to_data(py, py_challenge);
+            try!(run_protocol(py, p, instance, challenge))
+        }
         // TODO: make me newstyle protocol
-        "text/udp" => if let Ok(kwargs) = text_udp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
-            let r: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
-            r
-        } else {
-            return Err(PropertyError::FailedExecution)
-        },
+        "text/udp" => {
+            if let Ok(kwargs) = text_udp(host,
+                                         property.params["port"].parse::<u16>().unwrap(),
+                                         challenge) {
+                let r: bool = instance.call_method(py,
+                                                   "check_response",
+                                                   NoArgs,
+                                                   Some(&kwargs.to_py_object(py)))
+                                      .unwrap()
+                                      .extract(py)
+                                      .unwrap();
+                r
+            } else {
+                return Err(PropertyError::FailedExecution);
+            }
+        }
         "http/tcp" => {
-            let p = TcpHttp::new(host, port).with_data(string_from(py, py_challenge));
-            let result = p.send_challenge();
-            if result.is_ok() {
-                let response = result.unwrap();
-                let kwargs = response.to_py_object(py);
-                try!(check_response(py, &instance, &kwargs))
-            } else {
-                return Err(PropertyError::FailedExecution)
-            }
-        },
+            let mut p = TcpHttp::new(host, port);
+            let challenge = TcpHttp::to_data(py, py_challenge);
+            try!(run_protocol(py, p, instance, challenge))
+        }
         // TODO: make me newstyle protocol
-        "https/tcp" => if let Ok(kwargs) = https_tcp( host, property.params["port"].parse::<u16>().unwrap(), challenge) {
-            let r: bool = instance.call_method(py, "check_response", NoArgs, Some(&kwargs.to_py_object(py))).unwrap().extract(py).unwrap();
-            r
-        } else {
-            return Err(PropertyError::FailedExecution)
-        },
-        unknown => panic!("Unknown protocol '{}'.", unknown)
+        "https/tcp" => {
+            if let Ok(kwargs) = https_tcp(host,
+                                          property.params["port"].parse::<u16>().unwrap(),
+                                          challenge) {
+                let r: bool = instance.call_method(py,
+                                                   "check_response",
+                                                   NoArgs,
+                                                   Some(&kwargs.to_py_object(py)))
+                                      .unwrap()
+                                      .extract(py)
+                                      .unwrap();
+                r
+            } else {
+                return Err(PropertyError::FailedExecution);
+            }
+        }
+        unknown => panic!("Unknown protocol '{}'.", unknown),
     };
     debug!("- Module response check is '{}'.", result);
 
@@ -264,12 +338,31 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
         Ok(())
     } else {
         Err(PropertyError::FailedExecution)
+    };
+}
+
+fn run_protocol<'a, S, T, V, P>(py: Python,
+                                mut p: P,
+                                instance: PyObject,
+                                data: Option<T>)
+                                -> Result<bool, PropertyError>
+    where V: ToDict,
+          P: Protocol<'a, S, T, V> + ToData<T>
+{
+    if data.is_some() {
+        p.set_data(data.unwrap());
+    }
+    if let Ok(response) = p.send_challenge() {
+        let kwargs = ToDict::to_dict(py, response);
+        Ok(try!(check_response(py, &instance, &kwargs)))
+    } else {
+        Err(PropertyError::FailedExecution)
     }
 }
 
 fn check_response(py: Python, instance: &PyObject, response: &PyDict) -> Result<bool, PyErr> {
-    let r: bool = try!(instance.call_method(py, "check_response", NoArgs, Some(response))).extract(py).unwrap();
+    let r: bool = try!(instance.call_method(py, "check_response", NoArgs, Some(response)))
+                      .extract(py)
+                      .unwrap();
     Ok(r)
 }
-
-

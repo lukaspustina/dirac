@@ -17,7 +17,7 @@ pub type NoData = ();
 
 pub trait Protocol<'a, S, T, V> {
     fn new(host: &'a str, port: u16) -> S;
-    fn with_data(mut self: Self, data: T) -> S;
+    fn set_data(self: &mut Self, data: T);
     fn send_challenge(self: &Self) -> Result<V, Error>;
 }
 
@@ -34,8 +34,7 @@ impl<'a> Protocol<'a, TcpConnect<'a>, NoData, TcpConnectResponse> for TcpConnect
         })
     }
 
-    fn with_data(self: Self, _: NoData) -> TcpConnect<'a> {
-        self
+    fn set_data(self: &mut Self, _: NoData) {
     }
 
     fn send_challenge(self: &Self) -> Result<TcpConnectResponse, Error> {
@@ -59,12 +58,9 @@ impl<'a> Protocol<'a, TcpRaw<'a>, Vec<u8>, TcpRawResponse> for TcpRaw<'a> {
         })
     }
 
-    fn with_data(mut self: Self, data: Vec<u8>) -> TcpRaw<'a> {
-        {
-            let TcpRaw(ref mut challenge) = self;
-            challenge.data = Some(data);
-        }
-        self
+    fn set_data(self: &mut Self, data: Vec<u8>) {
+        let TcpRaw(ref mut challenge) = *self;
+        challenge.data = Some(data);
     }
 
     fn send_challenge(self: &Self) -> Result<TcpRawResponse, Error> {
@@ -94,12 +90,9 @@ impl<'a> Protocol<'a, TcpText<'a>, String, TcpTextResponse> for TcpText<'a> {
         })
     }
 
-    fn with_data(mut self: Self, data: String) -> TcpText<'a> {
-        {
-        let TcpText(ref mut challenge) = self;
+    fn set_data(self: &mut Self, data: String) {
+        let TcpText(ref mut challenge) = *self;
         challenge.data = Some(data);
-        }
-        self
     }
 
     fn send_challenge(self: &Self) -> Result<TcpTextResponse, Error> {
@@ -181,12 +174,9 @@ impl<'a> Protocol<'a, TcpHttp<'a>, String, TcpHttpTextResponse> for TcpHttp<'a> 
         })
     }
 
-    fn with_data(mut self: Self, data: String) -> TcpHttp<'a> {
-        {
-        let TcpHttp(ref mut challenge) = self;
+    fn set_data(self: &mut Self, data: String) {
+        let TcpHttp(ref mut challenge) = *self;
         challenge.data = Some(data);
-        }
-        self
     }
 
     fn send_challenge(self: &Self) -> Result<TcpHttpTextResponse, Error> {
