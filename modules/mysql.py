@@ -14,7 +14,30 @@ class Module(Dirac):
     def challenge(self):
         return None
 
-    def sanity_check(self, response):
+    def check_response(self, response):
+        try:
+            if not self._sanity_check(response):
+                return False
+
+            payload = response[4:]
+
+            # MySQL will answer with an error response, if you are
+            # not allowed to connect, e. g. from an unauthorized
+            # incoming IP address. This confirms the presence of
+            # a MysQL Server though :)
+            if self._is_error_packet(payload):
+                return True
+
+            if self._is_initial_handshake_packet(payload):
+                return True
+
+        except ValueError:
+            raise ResponeCheckError("Did not get expected response: %s" % self._as_hex(response))
+        return False
+
+
+
+    def _sanity_check(self, response):
         if response == None:
             return False
         if type(response) != bytearray:
@@ -52,7 +75,7 @@ class Module(Dirac):
 
 
     # https://dev.mysql.com/doc/internals/en/packet-ERR_Packet.html
-    def is_error_packet(self, payload):
+    def _is_error_packet(self, payload):
         payload_length = len(payload)
 
         if payload_length < 9:
@@ -64,7 +87,7 @@ class Module(Dirac):
         return True
 
     # https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
-    def is_initial_handshake_packet(self, payload):
+    def _is_initial_handshake_packet(self, payload):
         payload_length = len(payload)
         offset = 0
 
@@ -123,24 +146,4 @@ class Module(Dirac):
             return "<cannot convert %s to hex>" % type(data)
         ' '.join(format(b, '02x') for b in to_encode)
 
-    def check_response(self, response):
-        try:
-            if not self.sanity_check(response):
-                return False
-
-            payload = response[4:]
-
-            # MySQL will answer with an error response, if you are
-            # not allowed to connect, e. g. from an unauthorized
-            # incoming IP address. This confirms the presence of
-            # a MysQL Server though :)
-            if self.is_error_packet(payload):
-                return True
-
-            if self.is_initial_handshake_packet(payload):
-                return True
-
-        except ValueError:
-            raise ResponeCheckError("Did not get expected response: %s" % self.as_hex(response))
-        return False
 
