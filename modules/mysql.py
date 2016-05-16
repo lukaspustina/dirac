@@ -17,6 +17,8 @@ class Module(Dirac):
     def sanity_check(self, response):
         if response == None:
             return False
+        if type(response) != bytearray:
+            raise ValueError
 
         full_response_length = len(response)
         # https://dev.mysql.com/doc/internals/en/mysql-packet.html
@@ -113,6 +115,14 @@ class Module(Dirac):
         return True
 
 
+    def _as_hex(self, data):
+        to_encode = bytearray()
+        if type(data) == str or type(data) == bytearray:
+            to_encode.extend(data)
+        else:
+            return "<cannot convert %s to hex>" % type(data)
+        ' '.join(format(b, '02x') for b in to_encode)
+
     def check_response(self, response):
         try:
             if not self.sanity_check(response):
@@ -131,6 +141,6 @@ class Module(Dirac):
                 return True
 
         except ValueError:
-            raise ResponseCheckError("Did not get expected response: %s" % response)
+            raise ResponeCheckError("Did not get expected response: %s" % self.as_hex(response))
         return False
 
