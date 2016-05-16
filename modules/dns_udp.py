@@ -20,7 +20,7 @@ class Module(Dirac):
         try:
             return len(response) > 0
         except ValueError:
-            raise ResponeCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
+            raise ResponseCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
 
         return True
 

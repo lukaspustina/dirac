@@ -21,11 +21,11 @@ class Module(text_tcp.Module):
         try:
             # cf. https://tools.ietf.org/html/rfc4253#section-4.2
             (ssh, version, software) = response.strip().split(' ')[0].split('-', 2)
-            if ssh != "SSH": raise ResponeCheckError("Invalid prefix '%s' in repsonse; cf. RFC4253, section 4.2." % ssh)
-            if version != self.version: raise ResponeCheckError("Unexpected version '%s'; expected '%s'." % (version, self.version))
-            if self.software.match(software) is None: raise ResponeCheckError("Unexpected software version '%s'; expected to match against '%s'." % (software, self.software))
+            if ssh != "SSH": raise ResponseCheckError("Invalid prefix '%s' in repsonse; cf. RFC4253, section 4.2." % ssh)
+            if version != self.version: raise ResponseCheckError("Unexpected version '%s'; expected '%s'." % (version, self.version))
+            if self.software.match(software) is None: raise ResponseCheckError("Unexpected software version '%s'; expected to match against '%s'." % (software, self.software))
         except ValueError:
-            raise ResponeCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
+            raise ResponseCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
 
         return True
 

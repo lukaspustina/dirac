@@ -32,7 +32,7 @@ class Module(Dirac):
                 return True
 
         except ValueError:
-            raise ResponeCheckError("Did not get expected response: %s" % self._as_hex(response))
+            raise ResponseCheckError("Did not get expected response: %s" % self._as_hex(response))
         return False
 
 

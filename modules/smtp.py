@@ -33,11 +33,11 @@ class Module(text_tcp.Module):
         try:
             return_code = int(re.split('-| ', response)[0])
             if self.return_code != return_code:
-                raise ResponeCheckError("Unexpected result code '%d'; expected '%d'." % (return_code, self.return_code))
+                raise ResponseCheckError("Unexpected result code '%d'; expected '%d'." % (return_code, self.return_code))
             if self.software.match(response) is None:
-                raise ResponeCheckError("Unexpected software version '%s'; expected to match against '%s'." % (response, self.software))
+                raise ResponseCheckError("Unexpected software version '%s'; expected to match against '%s'." % (response, self.software))
         except ValueError:
-            raise ResponeCheckError("Invalid identification string '%s' in repsonse." % response)
+            raise ResponseCheckError("Invalid identification string '%s' in repsonse." % response)
 
         return True
 
