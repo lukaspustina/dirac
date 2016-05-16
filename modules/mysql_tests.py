@@ -1,6 +1,6 @@
 import unittest
 from nose.tools import *
-from dirac import ResponeCheckError
+from dirac import ResponseCheckError
 from mysql import Module
 
 
@@ -54,7 +54,7 @@ class UnitTests(unittest.TestCase):
         res = m.check_response(bytearray.fromhex(hex))
         self.assertTrue(res)
 
-    @raises(ResponeCheckError)
+    @raises(ResponseCheckError)
     def test_value_error(self):
         m = Module(3306)
         res = m.check_response("not a byte array")

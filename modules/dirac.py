@@ -38,7 +38,7 @@ class InvalidArgumentError(Error):
         return "%s: %s%s" % (repr(self.argument), repr(self.value), " %s" if reason else "")
 
 
-class ResponeCheckError(Error):
+class ResponseCheckError(Error):
 
     def __init__(self, message):
         self.message = message

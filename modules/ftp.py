@@ -21,9 +21,9 @@ class Module(text_tcp.Module):
             response_code_str = response.split(" ")[0]
             response_code = int(response_code_str)
             if response_code != self.response_code:
-                raise ResponeCheckError("Unexpected response code '%d'; expected '%d'." % (response_code, self.response_code))
+                raise ResponseCheckError("Unexpected response code '%d'; expected '%d'." % (response_code, self.response_code))
         except ValueError:
-            raise ResponeCheckError("Invalid response code '%d' in repsonse." % response_code)
+            raise ResponseCheckError("Invalid response code '%d' in repsonse." % response_code)
 
         return True
 
