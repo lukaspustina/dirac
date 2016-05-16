@@ -66,8 +66,7 @@ class UnitTests(unittest.TestCase):
         self.assertFalse(res)
 
 class ExampleTests(unittest.TestCase):
-
-    def test_mysql_55_error_response(self):
+    def test__mysql__5_5__ubuntu__14_04__error_response(self):
         m = Module(33306)
 
         # Host is not allow to connect error response
@@ -81,7 +80,7 @@ class ExampleTests(unittest.TestCase):
         res = m.check_response(bytearray.fromhex(hex))
         self.assertTrue(res)
 
-    def test_mysql_55_response(self):
+    def test__mysql__5_5__ubuntu__14_04(self):
         m = Module(33306)
 
         hex  = "5b 00 00 00 0a 35 2e 35  2e 34 39 2d 30 75 62 75" #  |[....5.5.49-0ubu|
