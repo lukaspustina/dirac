@@ -101,3 +101,9 @@
         uri: /
         response_code: 200
 
+- hosts: galera-nodes
+  properties:
+    - name: Check MySQL / Galera Server
+      mysql:
+        port: 3306
+
