@@ -3,8 +3,26 @@
 - inventory:
     all:
       - webserver.centerdevice.de
+      - 172.17.42.1
+      - 127.0.0.1
+    external:
+      - webserver.centerdevice.de
+    docker:
+      - 172.17.42.1
+    localhost:
+      - 127.0.0.1
+
 
 - hosts: all
+  properties:
+    - name: SSH Access
+      ssh:
+        port: 22
+        version: 2.0
+        software: "OpenSSH.*"
+
+
+- hosts: external
   properties:
     - name: FTP for Wordpress
       ftp:
@@ -14,11 +32,6 @@
       ftp:
         port: 2181
         response_code: 220
-    - name: SSH Access
-      ssh:
-        port: 22
-        version: 2.0
-        software: "OpenSSH.*"
     - name: HTTP Redirects to HTTPS
       http:
         port: 80
@@ -30,7 +43,7 @@
         port: 443
         verb: GET
         uri: /
-        response_code: 200
+        response_code: 301
     - name: Bosun
       https:
         port: 8070
@@ -42,5 +55,80 @@
         port: 8170
         verb: GET
         uri: /
+        response_code: 401
+
+
+- hosts: docker
+  properties:
+    - name: Check SMTP
+      smtp:
+          port: 25
+          software: ".*Postfix.*"
+          proxy: False
+          return_code: 220
+
+
+- hosts: localhost
+  properties:
+    - name: FTP
+      ftp:
+        port: 21
+        response_code: 220
+    - name: Check SMTP
+      smtp:
+          port: 25
+          software: ".*Postfix.*"
+          proxy: False
+          return_code: 220
+    - name: Wordpress
+      http:
+        port: 80
+        verb: GET
+        uri: /
+        response_code: 301
+    - name: HTTP Redirects to HTTPS
+      http:
+        port: 81
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: HTTP Redirects to HTTPS
+      http:
+        port: 82
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: MySQL
+      mysql:
+        port: 3306
+    - name: OpenTSDB for Bosun
+      http:
+        port: 4242
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: OpenTSDB for Bosun TE
+      http:
+        port: 4342
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: Bosun
+      http:
+        port: 8070
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: Bosun TE
+      http:
+        port: 8170
+        verb: GET
+        uri: /
+        response_code: 200
+    - name: HAProxy Admin
+      http:
+        port: 8404
+        verb: GET
+        uri: /monitor
         response_code: 401
 
