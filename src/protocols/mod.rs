@@ -5,8 +5,6 @@ use std::io::prelude::*;
 use std::net::{TcpStream, UdpSocket};
 use std::time::Duration;
 
-use super::engine::Kwargs;
-
 pub struct Challenge<'a, T> {
     host: &'a str,
     port: u16,
@@ -240,22 +238,47 @@ impl<'a> Protocol<'a, TcpHttp<'a>, String, TcpHttpTextResponse> for TcpHttp<'a> 
     }
 }
 
+pub struct TcpHttps<'a>(Challenge<'a, String>);
 
-pub fn https_tcp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, Error> {
-    let mut client = Client::new();
+pub struct TcpHttpsTextResponse(pub HttpResponse<String>);
 
-    let c = challenge.unwrap();
-    let challenge_parts: Vec<&str> = c.split_whitespace().collect();
-    let url = format!("https://{}:{}{}", host, port, challenge_parts[1]);
-    debug!("- https request '{}'", url);
+impl<'a> Protocol<'a, TcpHttps<'a>, String, TcpHttpsTextResponse> for TcpHttps<'a> {
+    fn new(host: &'a str, port: u16) -> TcpHttps {
+        TcpHttps(Challenge {
+            host: host,
+            port: port,
+            data: None,
+        })
+    }
 
-    client.set_redirect_policy(RedirectPolicy::FollowNone);
-    let res = client.get(&url).send().unwrap();
+    fn set_data(self: &mut Self, data: String) {
+        let TcpHttps(ref mut challenge) = *self;
+        challenge.data = Some(data);
+    }
 
-    let mut kwargs = Kwargs::new();
-    kwargs.insert("response_code".to_string(), res.status_raw().0.to_string());
-    kwargs.insert("headers".to_string(), "".to_string());
-    kwargs.insert("body".to_string(), "".to_string());
+    fn send_challenge(self: &Self) -> Result<TcpHttpsTextResponse, Error> {
+        let TcpHttps(ref challenge) = *self;
+        let mut client = Client::new();
 
-    Ok(kwargs)
+        let data = challenge.data.as_ref().unwrap();
+        let data_parts: Vec<&str> = data.split_whitespace().collect();
+        let url = format!("https://{}:{}{}",
+                          challenge.host,
+                          challenge.port,
+                          data_parts[1]);
+        debug!("- https request '{}'", url);
+
+        client.set_redirect_policy(RedirectPolicy::FollowNone);
+        // TODO: use verb instead of hardcoded get
+        let res = client.get(&url).send().unwrap();
+
+        let headers = HashMap::new();
+        let response_data: HttpResponse<String> = HttpResponse {
+            response_code: res.status_raw().0,
+            headers: headers,
+            body: "<not yet implemented>".to_string(),
+        };
+        Ok(TcpHttpsTextResponse(response_data))
+    }
 }
+

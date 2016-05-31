@@ -206,6 +206,18 @@ impl<'a> ToData<String> for TcpHttp<'a> {
     }
 }
 
+impl<'a> ToData<String> for TcpHttps<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<String> {
+        let py_none = py.None();
+        if po != py_none {
+            let s = string_from(py, po);
+            Some(s)
+        } else {
+            None
+        }
+    }
+}
+
 
 fn string_from(py: Python, po: PyObject) -> String {
     let s = po.extract::<PyString>(py).unwrap().to_string(py).unwrap().to_string();
@@ -269,6 +281,22 @@ impl ToDict for TcpHttpTextResponse {
     }
 }
 
+impl ToDict for TcpHttpsTextResponse {
+    fn to_dict(py: Python, response: TcpHttpsTextResponse) -> PyDict {
+        let TcpHttpsTextResponse(response) = response;
+        let py_dict = PyDict::new(py);
+        let py_response_code = response.response_code.to_py_object(py);
+        let _ = py_dict.set_item(py, "response_code", py_response_code);
+        // TODO: Implement me
+        // let py_headers = self.data.headers.to_py_object(py);
+        // py_dict.set_item(py, "headers", py_headers);
+        let _ = py_dict.set_item(py, "headers", py.None());
+        let py_body = response.body.to_py_object(py);
+        let _ = py_dict.set_item(py, "body", py_body);
+        py_dict
+    }
+}
+
 fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(), PropertyError> {
     let import = try!(py.import(&property.module));
     let module: PyObject = try!(import.get(py, "Module"));
@@ -292,13 +320,6 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
     debug!("- Module instance is '{}'.", instance);
 
     let py_challenge: PyObject = try!(instance.call_method(py, "challenge", NoArgs, None));
-    let py_none = py.None();
-    let challenge: Option<String> = if py_challenge == py_none {
-        None
-    } else {
-        Some(py_challenge.extract::<PyString>(py).unwrap().to_string(py).unwrap().to_string())
-    };
-
     let port = property.params["port"].parse::<u16>().unwrap();
     let result = match &protocol[..] {
         "connect/tcp" => {
@@ -325,22 +346,10 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             let challenge = TcpHttp::to_data(py, py_challenge);
             try!(run_protocol(py, p, instance, challenge))
         }
-        // TODO: make me newstyle protocol
         "https/tcp" => {
-            if let Ok(kwargs) = https_tcp(host,
-                                          property.params["port"].parse::<u16>().unwrap(),
-                                          challenge) {
-                let r: bool = instance.call_method(py,
-                                                   "check_response",
-                                                   NoArgs,
-                                                   Some(&kwargs.to_py_object(py)))
-                                      .unwrap()
-                                      .extract(py)
-                                      .unwrap();
-                r
-            } else {
-                return Err(PropertyError::FailedExecution);
-            }
+            let p = TcpHttps::new(host, port);
+            let challenge = TcpHttps::to_data(py, py_challenge);
+            try!(run_protocol(py, p, instance, challenge))
         }
         unknown => panic!("Unknown protocol '{}'.", unknown),
     };
