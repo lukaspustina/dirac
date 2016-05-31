@@ -116,7 +116,7 @@ pub fn run(check_suite: &CheckSuite) -> CheckSuiteResult {
                             PropertyError::FailedPythonCall(ref py_err) => {
                                 println!("    {:>11}: [{}]", Red.paint("Failed (P)"), host);
                                 // TODO: Make me configurable
-                                if (true) {
+                                if true {
                                     // TODO: Destructure and pretty print me
                                     println!("{:?}", py_err);
                                 }
@@ -150,6 +150,7 @@ trait ToData<T> {
 }
 
 impl<'a> ToData<NoData> for TcpConnect<'a> {
+    #[allow(unused_variables)]
     fn to_data(py: Python, po: PyObject) -> Option<NoData> {
         None
     }
@@ -204,6 +205,7 @@ trait ToDict {
 }
 
 impl ToDict for TcpConnectResponse {
+    #[allow(unused_variables)]
     fn to_dict(py: Python, response: TcpConnectResponse) -> PyDict {
         PyDict::new(py)
     }
@@ -282,12 +284,12 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             try!(run_protocol(py, p, instance, None))
         }
         "raw/tcp" => {
-            let mut p = TcpRaw::new(host, port);
+            let p = TcpRaw::new(host, port);
             let challenge = TcpRaw::to_data(py, py_challenge);
             try!(run_protocol(py, p, instance, challenge))
         }
         "text/tcp" => {
-            let mut p = TcpText::new(host, port);
+            let p = TcpText::new(host, port);
             let challenge = TcpText::to_data(py, py_challenge);
             try!(run_protocol(py, p, instance, challenge))
         }
@@ -309,7 +311,7 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             }
         }
         "http/tcp" => {
-            let mut p = TcpHttp::new(host, port);
+            let p = TcpHttp::new(host, port);
             let challenge = TcpHttp::to_data(py, py_challenge);
             try!(run_protocol(py, p, instance, challenge))
         }
