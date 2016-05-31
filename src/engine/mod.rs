@@ -182,6 +182,18 @@ impl<'a> ToData<String> for TcpText<'a> {
     }
 }
 
+impl<'a> ToData<String> for UdpText<'a> {
+    fn to_data(py: Python, po: PyObject) -> Option<String> {
+        let py_none = py.None();
+        if po != py_none {
+            let s = string_from(py, po);
+            Some(s)
+        } else {
+            None
+        }
+    }
+}
+
 impl<'a> ToData<String> for TcpHttp<'a> {
     fn to_data(py: Python, po: PyObject) -> Option<String> {
         let py_none = py.None();
@@ -224,6 +236,16 @@ impl ToDict for TcpRawResponse {
 impl ToDict for TcpTextResponse {
     fn to_dict(py: Python, response: TcpTextResponse) -> PyDict {
         let TcpTextResponse(response) = response;
+        let py_dict = PyDict::new(py);
+        let py_string = response.to_py_object(py);
+        let _ = py_dict.set_item(py, "response", py_string);
+        py_dict
+    }
+}
+
+impl ToDict for UdpTextResponse {
+    fn to_dict(py: Python, response: UdpTextResponse) -> PyDict {
+        let UdpTextResponse(response) = response;
         let py_dict = PyDict::new(py);
         let py_string = response.to_py_object(py);
         let _ = py_dict.set_item(py, "response", py_string);
@@ -293,22 +315,10 @@ fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(),
             let challenge = TcpText::to_data(py, py_challenge);
             try!(run_protocol(py, p, instance, challenge))
         }
-        // TODO: make me newstyle protocol
         "text/udp" => {
-            if let Ok(kwargs) = text_udp(host,
-                                         property.params["port"].parse::<u16>().unwrap(),
-                                         challenge) {
-                let r: bool = instance.call_method(py,
-                                                   "check_response",
-                                                   NoArgs,
-                                                   Some(&kwargs.to_py_object(py)))
-                                      .unwrap()
-                                      .extract(py)
-                                      .unwrap();
-                r
-            } else {
-                return Err(PropertyError::FailedExecution);
-            }
+            let p = UdpText::new(host, port);
+            let challenge = UdpText::to_data(py, py_challenge);
+            try!(run_protocol(py, p, instance, challenge))
         }
         "http/tcp" => {
             let p = TcpHttp::new(host, port);

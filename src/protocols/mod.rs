@@ -133,25 +133,60 @@ fn tcp_stream_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, 
     Ok(v)
 }
 
-pub fn text_udp(host: &str, port: u16, challenge: Option<String>) -> Result<Kwargs, Error> {
-    let mut kwargs = Kwargs::new();
+pub struct UdpText<'a>(Challenge<'a, String>);
 
-    let dur = Duration::new(1, 0);
+pub struct UdpTextResponse(pub String);
+
+impl<'a> Protocol<'a, UdpText<'a>, String, UdpTextResponse> for UdpText<'a> {
+    fn new(host: &'a str, port: u16) -> UdpText {
+        UdpText(Challenge {
+            host: host,
+            port: port,
+            data: None,
+        })
+    }
+
+    fn set_data(self: &mut Self, data: String) {
+        let UdpText(ref mut challenge) = *self;
+        challenge.data = Some(data);
+    }
+
+    fn send_challenge(self: &Self) -> Result<UdpTextResponse, Error> {
+        let UdpText(ref challenge) = *self;
+        let bytes = if let Some(ref data) = challenge.data {
+            data.as_bytes()
+        } else {
+            let empty: &[u8] = &[0u8; 0];
+            empty
+        };
+        let response_bytes = try!(udp_datagram_send_recv(challenge.host, challenge.port, bytes));
+        let string = String::from_utf8_lossy(&response_bytes.as_slice()).to_string();
+
+        Ok(UdpTextResponse(string))
+    }
+}
+
+pub fn udp_datagram_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, Error> {
     let socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
+    let dur = Duration::new(1, 0);
     socket.set_read_timeout(Some(dur)).unwrap();
 
-    if let Some(c) = challenge {
-        let tx_buf = c.as_bytes();
-        let _ = tx_buf.len();
-        try!(socket.send_to(tx_buf, (host, port)));
-    };
+    if bytes.len() > 0 {
+        let tx_res = try!(socket.send_to(&bytes, (host, port)));
+        // TODO: Assert to real check
+        assert_eq!(tx_res, bytes.len());
+        debug!("- Sent data '{:?}'.", bytes);
+    }
 
-    let mut rx_buf = [0; 1024];
+    let mut rx_buf = [0u8; 1024];
     let (rx_len, _) = try!(socket.recv_from(&mut rx_buf));
+    debug!("- Received result from '{}/{}', '{}' bytes.",
+           host,
+           port,
+           rx_len);
 
-    let response = String::from_utf8_lossy(&rx_buf[0..rx_len]).to_string();
-    kwargs.insert("response".to_string(), response);
-    Ok(kwargs)
+    let v = From::from(&rx_buf[0..rx_len]);
+    Ok(v)
 }
 
 
