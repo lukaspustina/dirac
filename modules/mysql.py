@@ -40,7 +40,7 @@ class Module(Dirac):
     def _sanity_check(self, response):
         if response == None:
             return False
-        if type(response) != bytearray:
+        if type(response) != bytes:
             raise ValueError
 
         full_response_length = len(response)
@@ -140,8 +140,10 @@ class Module(Dirac):
 
     def _as_hex(self, data):
         to_encode = bytearray()
-        if type(data) == str or type(data) == bytearray:
+        if type(data) == bytes:
             to_encode.extend(data)
+        if type(data) == str:
+            to_encode.extend(str.encode(data))
         else:
             return "<cannot convert %s to hex>" % type(data)
         ' '.join(format(b, '02x') for b in to_encode)

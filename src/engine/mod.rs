@@ -239,7 +239,7 @@ impl ToDict for TcpRawResponse {
     fn to_dict(py: Python, response: TcpRawResponse) -> PyDict {
         let TcpRawResponse(response) = response;
         let py_dict = PyDict::new(py);
-        let py_bytes = response.to_py_object(py);
+        let py_bytes: PyBytes = PyBytes::new(py, &response);
         let _ = py_dict.set_item(py, "response", py_bytes);
         py_dict
     }
