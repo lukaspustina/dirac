@@ -1,8 +1,7 @@
-target
+target/
 Cargo.lock
-__pycache__
-duck_check
+__pycache__/
 *.pyc
 reports/
 .idea/
-dirac.iml
+*.iml
