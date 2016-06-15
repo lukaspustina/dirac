@@ -161,7 +161,7 @@ impl<'a> ToData<Vec<u8>> for TcpRaw<'a> {
         let py_none = py.None();
         if po != py_none {
             let b = po.extract::<PyBytes>(py).unwrap();
-            let s = b.as_slice(py);
+            let s = b.data(py);
             let v = From::from(&s[..]);
             Some(v)
         } else {

@@ -224,7 +224,7 @@ impl<'a> Protocol<'a, TcpHttp<'a>, String, TcpHttpTextResponse> for TcpHttp<'a> 
         debug!("- http request '{}'", url);
 
         client.set_redirect_policy(RedirectPolicy::FollowNone);
-        // TODO: use verb instead of hardcoded get
+        // TODO: use verb instead of hardcoded get and handle hyper Errors
         let res = client.get(&url).send().unwrap();
 
         let headers = HashMap::new();
