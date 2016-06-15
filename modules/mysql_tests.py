@@ -16,17 +16,17 @@ class UnitTests(unittest.TestCase):
 
     def test_announced_zero_payload(self):
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex('00 00 00 00'))
+        res = m.check_response(bytes.fromhex('00 00 00 00'))
         self.assertFalse(res)
 
     def test_payload_length_mismatch(self):
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex('01 00 00 00 aa bb'))
+        res = m.check_response(bytes.fromhex('01 00 00 00 aa bb'))
         self.assertFalse(res)
 
     def test_payload_length_2(self):
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex('02 00 00 00 aa bb'))
+        res = m.check_response(bytes.fromhex('02 00 00 00 aa bb'))
         self.assertFalse(res)
 
     def test_payload_length_256(self):
@@ -34,24 +34,24 @@ class UnitTests(unittest.TestCase):
         payload = ""
         for i in range(256):
             payload += "aa "
-        res = m.check_response(bytearray.fromhex('00 01 00 00 ' + payload))
+        res = m.check_response(bytes.fromhex('00 01 00 00 ' + payload))
         self.assertFalse(res)
 
     def test_valid_error_packet(self):
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex('09 00 00 00   FF 01 00 AA BB BB BB BB BB'))
+        res = m.check_response(bytes.fromhex('09 00 00 00   FF 01 00 AA BB BB BB BB BB'))
         self.assertTrue(res)
 
     def test_too_short_error_packet(self):
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex('08 00 00 00   FF 01 00 AA BB BB BB BB'))
+        res = m.check_response(bytes.fromhex('08 00 00 00   FF 01 00 AA BB BB BB BB'))
         self.assertFalse(res)
 
     def test_initial_handshake_packet(self):
         hex = "14 00 00 00"
         hex += "0a   41 42 43 44 45 00   01 00 00 00   46 47 48 49 4A 4B 4C 4E   00"
         m = Module(3306)
-        res = m.check_response(bytearray.fromhex(hex))
+        res = m.check_response(bytes.fromhex(hex))
         self.assertTrue(res)
 
     @raises(ResponseCheckError)
@@ -77,7 +77,7 @@ class ExampleTests(unittest.TestCase):
         hex += "65 72 76 65 72                                  " #  |erver|
         # 0x45 == 69 bytes, 0x41 = 65 payload
 
-        res = m.check_response(bytearray.fromhex(hex))
+        res = m.check_response(bytes.fromhex(hex))
         self.assertTrue(res)
 
     def test__mysql__5_5__ubuntu__14_04(self):
@@ -91,6 +91,6 @@ class ExampleTests(unittest.TestCase):
         hex += "61 74 69 76 65 5f 70 61  73 73 77 6f 72 64 00   " #  |ative_password.|
         # 0x5f == 95 bytes, 0x5b = 91 payload
 
-        res = m.check_response(bytearray.fromhex(hex))
+        res = m.check_response(bytes.fromhex(hex))
         self.assertTrue(res)
 
