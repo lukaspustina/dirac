@@ -32,7 +32,7 @@ impl<'a> Report<'a> for JsonReport<'a> {
     }
 }
 
-impl<'a > ToJson for PropertyResult<'a> {
+impl<'a> ToJson for PropertyResult<'a> {
     fn to_json(&self) -> Json {
         let mut d = BTreeMap::new();
         d.insert("host".to_string(), self.host.to_json());
@@ -50,23 +50,22 @@ impl<'a > ToJson for PropertyResult<'a> {
     }
 }
 
-impl<'a > ToJson for CheckResult<'a> {
+impl<'a> ToJson for CheckResult<'a> {
     fn to_json(&self) -> Json {
         let mut d = BTreeMap::new();
-        d.insert("inventory_name".to_string(), self.check.inventory_name.to_json());
+        d.insert("inventory_name".to_string(),
+                 self.check.inventory_name.to_json());
         d.insert("property_results".to_string(), self.results.to_json());
         Json::Object(d)
     }
 }
 
-impl<'a > ToJson for CheckSuiteResult<'a> {
+impl<'a> ToJson for CheckSuiteResult<'a> {
     fn to_json(&self) -> Json {
         let mut d = BTreeMap::new();
-        d.insert("inventory".to_string(), self.check_suite.inventory.to_json());
+        d.insert("inventory".to_string(),
+                 self.check_suite.inventory.to_json());
         d.insert("check_results".to_string(), self.results.to_json());
         Json::Object(d)
     }
 }
-
-
-

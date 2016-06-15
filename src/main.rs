@@ -70,9 +70,9 @@ fn print_summary(check_suite_result: &CheckSuiteResult) {
     print!("{}\n", Bold.paint("SUMMARY"));
     for kv in summary {
         print!(" * {:<30} Success {:4}, Failed {:4}\n",
-                 kv.0,
-                 Green.paint((kv.1).0),
-                 Red.paint((kv.1).1));
+               kv.0,
+               Green.paint((kv.1).0),
+               Red.paint((kv.1).1));
     }
 }
 
@@ -92,4 +92,3 @@ fn create_summary<'a>(check_suite_result: &'a CheckSuiteResult) -> HashMap<&'a s
 
     result
 }
-

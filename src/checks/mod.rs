@@ -9,13 +9,13 @@ pub type Inventory = HashMap<String, Vec<String>>;
 pub struct Property {
     pub name: String,
     pub module: String,
-    pub params: HashMap<String, String>
+    pub params: HashMap<String, String>,
 }
 
 #[derive(Debug, RustcEncodable)]
 pub struct Check {
     pub inventory_name: String,
-    pub properties: Vec<Property>
+    pub properties: Vec<Property>,
 }
 
 
@@ -26,7 +26,6 @@ pub struct CheckSuite {
 }
 
 impl CheckSuite {
-
     pub fn read_from_file(filename: &str) -> Option<CheckSuite> {
         let key_inventory: Yaml = Yaml::from_str("inventory");
         let key_host = Yaml::from_str("hosts");
@@ -101,7 +100,13 @@ impl CheckSuite {
                             }
                         }
                         if module.is_some() {
-                            let params_yaml = property_yml.as_hash().unwrap().get(&Yaml::from_str(module.as_ref().unwrap())).unwrap().as_hash().unwrap();
+                            let params_yaml = property_yml.as_hash()
+                                                          .unwrap()
+                                                          .get(&Yaml::from_str(module.as_ref()
+                                                                                     .unwrap()))
+                                                          .unwrap()
+                                                          .as_hash()
+                                                          .unwrap();
                             for kv in params_yaml {
                                 let value: String = match *kv.1 {
                                     Yaml::Integer(i) => i.to_string(),
@@ -112,10 +117,17 @@ impl CheckSuite {
                                 params.insert(kv.0.as_str().unwrap().to_string(), value);
                             }
                         }
-                        properties.push( Property { name: name.unwrap(), module: module.unwrap(), params: params } );
+                        properties.push(Property {
+                            name: name.unwrap(),
+                            module: module.unwrap(),
+                            params: params,
+                        });
                     }
 
-                    let check = Check { inventory_name: inventory_name.to_string(), properties: properties };
+                    let check = Check {
+                        inventory_name: inventory_name.to_string(),
+                        properties: properties,
+                    };
                     debug!("- Created a check: {:?}", check);
                     checks.push(check);
                 }
@@ -125,8 +137,10 @@ impl CheckSuite {
         info!("* Inventory: {:?}", inventory);
         info!("* Checks: {:?}", checks);
 
-        let suite = CheckSuite { inventory: inventory, checks: checks };
+        let suite = CheckSuite {
+            inventory: inventory,
+            checks: checks,
+        };
         return Some(suite);
     }
 }
-

@@ -32,8 +32,7 @@ impl<'a> Protocol<'a, TcpConnect<'a>, NoData, TcpConnectResponse> for TcpConnect
         })
     }
 
-    fn set_data(self: &mut Self, _: NoData) {
-    }
+    fn set_data(self: &mut Self, _: NoData) {}
 
     fn send_challenge(self: &Self) -> Result<TcpConnectResponse, Error> {
         let TcpConnect(ref challenge) = *self;
@@ -281,4 +280,3 @@ impl<'a> Protocol<'a, TcpHttps<'a>, String, TcpHttpsTextResponse> for TcpHttps<'
         Ok(TcpHttpsTextResponse(response_data))
     }
 }
-

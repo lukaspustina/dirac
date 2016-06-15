@@ -9,7 +9,7 @@ use self::md::MarkdownReport;
 
 pub enum ReportType {
     Json,
-    Markdown
+    Markdown,
 }
 
 pub struct Reporter<'a> {
@@ -42,7 +42,7 @@ impl<'a> Reporter<'a> {
             ReportType::Json => {
                 let report = JsonReport::new(self.check_suite_result, self.filename.unwrap());
                 Box::new(report)
-            },
+            }
             ReportType::Markdown => {
                 let report = MarkdownReport::new(self.check_suite_result, self.filename.unwrap());
                 Box::new(report)
@@ -55,4 +55,3 @@ pub trait Report<'a> {
     fn as_string(&self) -> String;
     fn write_to_file(&self) -> io::Result<()>;
 }
-

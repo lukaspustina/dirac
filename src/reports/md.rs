@@ -57,14 +57,16 @@ impl<'a> ToMarkdown for CheckSuiteResult<'a> {
             report.push_str(&format!("### {}\n", host));
             report.push_str("\n");
             for property_result in summary.get(host).unwrap() {
-                report.push_str(&format!("* {} *{}*", property_result.property.name, property_result.property.module));
+                report.push_str(&format!("* {} *{}*",
+                                         property_result.property.name,
+                                         property_result.property.module));
                 let r = if property_result.result.is_ok() {
                     "Success"
                 } else {
                     "**Failed**"
                 };
                 report.push_str(&format!(" {}\n", r));
-            report.push_str("\n");
+                report.push_str("\n");
             }
         }
 
@@ -91,7 +93,8 @@ fn create_total_summary<'a>(check_suite_result: &'a CheckSuiteResult) -> HashMap
     result
 }
 
-fn create_host_summary<'a>(check_suite_result: &'a CheckSuiteResult) -> HashMap<&'a str, Vec<&'a PropertyResult<'a>>> {
+fn create_host_summary<'a>(check_suite_result: &'a CheckSuiteResult)
+                           -> HashMap<&'a str, Vec<&'a PropertyResult<'a>>> {
     let mut result = HashMap::new();
 
     for check in &check_suite_result.results {
@@ -103,4 +106,3 @@ fn create_host_summary<'a>(check_suite_result: &'a CheckSuiteResult) -> HashMap<
 
     result
 }
-
