@@ -1,6 +1,8 @@
+import dirac
 from dirac import *
 
-class Module(Dirac):
+
+class Module(dirac.Module):
     _module_protocol = "raw/tcp"
 
     @classmethod
@@ -35,10 +37,8 @@ class Module(Dirac):
             raise ResponseCheckError("Did not get expected response: %s" % self._as_hex(response))
         return False
 
-
-
     def _sanity_check(self, response):
-        if response == None:
+        if response is None:
             return False
         if type(response) != bytes:
             raise ValueError
@@ -47,7 +47,7 @@ class Module(Dirac):
         # https://dev.mysql.com/doc/internals/en/mysql-packet.html
         # 4 bytes packet header minimum
         if full_response_length < 4:
-        # Response length < 4 -- missing packet header?
+            # Response length < 4 -- missing packet header?
             return False
 
         actual_payload_length = full_response_length - 4
@@ -55,7 +55,7 @@ class Module(Dirac):
         # 3 bytes payload length announcement
         expected_payload_length = 0
         for i in range(3):
-            expected_payload_length += response[i] << (8*i)
+            expected_payload_length += response[i] << (8 * i)
 
         if expected_payload_length == 0:
             # Announced payload length is 0 -- this cannot be right
@@ -72,7 +72,6 @@ class Module(Dirac):
             return False
 
         return True
-
 
     # https://dev.mysql.com/doc/internals/en/packet-ERR_Packet.html
     def _is_error_packet(self, payload):
@@ -121,31 +120,28 @@ class Module(Dirac):
             return False
 
         # Determined by server. Not particularly useful here.
-        connection_id = payload[offset : offset + 4]
-        offset+=4
+        connection_id = payload[offset: offset + 4]
+        offset += 4
 
         # Determined by server. Not particularly useful here.
-        auth_plugin_data_part_1 = payload[offset : offset + 8]
+        auth_plugin_data_part_1 = payload[offset: offset + 8]
         offset += 8
 
         # Filler NUL byte, always here.
         filler = payload[offset]
-        offset +=1
+        offset += 1
         if filler != 0x00:
             return False
 
         # After the filler, all further fields are optional
         return True
 
-
     def _as_hex(self, data):
         to_encode = bytearray()
-        if type(data) == bytes:
+        if type(data) == bytes or type(data) == bytearray:
             to_encode.extend(data)
         if type(data) == str:
             to_encode.extend(str.encode(data))
         else:
             return "<cannot convert %s to hex>" % type(data)
         ' '.join(format(b, '02x') for b in to_encode)
-
-

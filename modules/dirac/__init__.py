@@ -1,7 +1,7 @@
 import re
 
-class Dirac(object):
 
+class Module(object):
     _module_protocol = ""
 
     @classmethod
@@ -15,6 +15,7 @@ class Dirac(object):
     def __init__(self, **kwargs):
         pass
 
+    # noinspection PyMethodMayBeStatic
     def challenge(self):
         return None
 
@@ -28,18 +29,16 @@ class Error(Exception):
 
 
 class InvalidArgumentError(Error):
-
     def __init__(self, argument, value, reason=None):
         self.argument = argument
         self.value = value
         self.reason = reason
 
     def __str__(self):
-        return "%s: %s%s" % (repr(self.argument), repr(self.value), " %s" if reason else "")
+        return "%s: %s%s" % (repr(self.argument), repr(self.value), " %s" if self.reason else "")
 
 
 class ResponseCheckError(Error):
-
     def __init__(self, message):
         self.message = message
 
@@ -50,8 +49,9 @@ class ResponseCheckError(Error):
 def is_valid_number(number, minimum, maximum, name="number", msg="is not a valid number"):
     try:
         n = int(number)
-        if n < minimum or n > maximum: raise ValueError()
-    except ValueError as err:
+        if n < minimum or n > maximum:
+            raise ValueError()
+    except ValueError:
         raise InvalidArgumentError(name, number, msg)
 
 
@@ -66,4 +66,3 @@ def is_valid_regex(regex, name, msg="is not a valid regular expression"):
         raise InvalidArgumentError(name, regex, msg)
 
     return True
-

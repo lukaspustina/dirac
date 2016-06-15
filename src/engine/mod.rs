@@ -298,9 +298,10 @@ impl ToDict for TcpHttpsTextResponse {
 }
 
 fn execute_module<'a>(py: Python, host: &str, property: &Property) -> Result<(), PropertyError> {
-    let import = try!(py.import(&property.module));
+    let module_name = format!("dirac.{}", &property.module);
+    let import = try!(py.import(&module_name));
     let module: PyObject = try!(import.get(py, "Module"));
-    info!("* Loaded module '{}'.", &property.name);
+    info!("* Loaded module '{}'.", &module_name);
 
     let protocol_fn = try!(module.getattr(py, "protocol"));
     let protocol: String = try!(protocol_fn.call(py, NoArgs, None)).extract(py).unwrap();
@@ -370,10 +371,14 @@ fn run_protocol<'a, S, T, V, P>(py: Python,
     where V: ToDict,
           P: Protocol<'a, S, T, V> + ToData<T>
 {
+    info!("* Running protocol.");
+
     if data.is_some() {
         p.set_data(data.unwrap());
     }
+    debug!("- Sending challenge.", );
     if let Ok(response) = p.send_challenge() {
+        debug!("- Challenge sent.", );
         let kwargs = ToDict::to_dict(py, response);
         Ok(try!(check_response(py, &instance, &kwargs)))
     } else {
@@ -382,6 +387,8 @@ fn run_protocol<'a, S, T, V, P>(py: Python,
 }
 
 fn check_response(py: Python, instance: &PyObject, response: &PyDict) -> Result<bool, PyErr> {
+    info!("* Checking response.");
+
     let r: bool = try!(instance.call_method(py, "check_response", NoArgs, Some(response)))
                       .extract(py)
                       .unwrap();

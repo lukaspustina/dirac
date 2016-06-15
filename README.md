@@ -8,7 +8,7 @@
 
 ### Run All Module Tests
 
-`nosetests`
+`nosetests modules`
 
 ### Run Specific Module Test
 

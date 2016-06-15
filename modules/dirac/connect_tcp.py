@@ -1,8 +1,8 @@
-from dirac import Dirac
+import dirac
 
-class Module(Dirac):
 
-    _module_protocol = "raw/tcp"
+class Module(dirac.Module):
+    _module_protocol = "connect/tcp"
 
     @classmethod
     def check_args(cls, **kwargs):
@@ -12,10 +12,7 @@ class Module(Dirac):
         pass
 
     def challenge(self):
-        return None
+        return super().challenge()
 
     def check_response(self, **kwargs):
         return True
-
-
-

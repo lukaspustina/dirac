@@ -1,7 +1,8 @@
 from dirac import *
+import dirac
 
-class Module(Dirac):
 
+class Module(dirac.Module):
     _module_protocol = "text/udp"
 
     @classmethod
@@ -18,9 +19,8 @@ class Module(Dirac):
 
     def check_response(self, response):
         try:
-            return len(response) > 0
+            return not response or len(response) > 0
         except ValueError:
-            raise ResponseCheckError("Invalid identification string '%s' in repsonse; cf. RFC4253, section 4.2." % response)
-
-        return True
-
+            raise ResponseCheckError(
+                "Invalid identification string '%s' in response; cf. RFC4253, section 4.2." %
+                response)

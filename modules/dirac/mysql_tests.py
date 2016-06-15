@@ -1,7 +1,8 @@
 import unittest
 from nose.tools import *
-from dirac import ResponseCheckError
-from mysql import Module
+
+from dirac import *
+from dirac.mysql import Module
 
 
 class UnitTests(unittest.TestCase):
@@ -57,24 +58,24 @@ class UnitTests(unittest.TestCase):
     @raises(ResponseCheckError)
     def test_value_error(self):
         m = Module(3306)
-        res = m.check_response("not a byte array")
-
+        m.check_response("not a byte array")
 
     def test_init(self):
         m = Module(3306)
         res = m.check_response(None)
         self.assertFalse(res)
 
+
 class ExampleTests(unittest.TestCase):
     def test__mysql__5_5__ubuntu__14_04__error_response(self):
         m = Module(33306)
 
         # Host is not allow to connect error response
-        hex  = "41 00 00 00 ff 6a 04 48  6f 73 74 20 27 31 30 2e" #  |A....j.Host '10.|
-        hex += "30 2e 32 2e 32 27 20 69  73 20 6e 6f 74 20 61 6c" #  |0.2.2' is not al|
-        hex += "6c 6f 77 65 64 20 74 6f  20 63 6f 6e 6e 65 63 74" #  |lowed to connect|
-        hex += "20 74 6f 20 74 68 69 73  20 4d 79 53 51 4c 20 73" #  | to this MySQL s|
-        hex += "65 72 76 65 72                                  " #  |erver|
+        hex = "41 00 00 00 ff 6a 04 48  6f 73 74 20 27 31 30 2e"  # |A....j.Host '10.|
+        hex += "30 2e 32 2e 32 27 20 69  73 20 6e 6f 74 20 61 6c"  # |0.2.2' is not al|
+        hex += "6c 6f 77 65 64 20 74 6f  20 63 6f 6e 6e 65 63 74"  # |lowed to connect|
+        hex += "20 74 6f 20 74 68 69 73  20 4d 79 53 51 4c 20 73"  # | to this MySQL s|
+        hex += "65 72 76 65 72                                  "  # |erver|
         # 0x45 == 69 bytes, 0x41 = 65 payload
 
         res = m.check_response(bytes.fromhex(hex))
@@ -83,14 +84,13 @@ class ExampleTests(unittest.TestCase):
     def test__mysql__5_5__ubuntu__14_04(self):
         m = Module(33306)
 
-        hex  = "5b 00 00 00 0a 35 2e 35  2e 34 39 2d 30 75 62 75" #  |[....5.5.49-0ubu|
-        hex += "6e 74 75 30 2e 31 34 2e  30 34 2e 31 00 4b 00 00" #  |ntu0.14.04.1.K..|
-        hex += "00 52 6c 49 67 4b 22 66  5e 00 ff f7 08 02 00 0f" #  |.RlIgK"f^.......|
-        hex += "80 15 00 00 00 00 00 00  00 00 00 00 25 39 31 2a" #  |............%91*|
-        hex += "7c 54 70 55 38 57 31 2b  00 6d 79 73 71 6c 5f 6e" #  ||TpU8W1+.mysql_n|
-        hex += "61 74 69 76 65 5f 70 61  73 73 77 6f 72 64 00   " #  |ative_password.|
+        hex = "5b 00 00 00 0a 35 2e 35  2e 34 39 2d 30 75 62 75"  # |[....5.5.49-0ubu|
+        hex += "6e 74 75 30 2e 31 34 2e  30 34 2e 31 00 4b 00 00"  # |ntu0.14.04.1.K..|
+        hex += "00 52 6c 49 67 4b 22 66  5e 00 ff f7 08 02 00 0f"  # |.RlIgK"f^.......|
+        hex += "80 15 00 00 00 00 00 00  00 00 00 00 25 39 31 2a"  # |............%91*|
+        hex += "7c 54 70 55 38 57 31 2b  00 6d 79 73 71 6c 5f 6e"  # ||TpU8W1+.mysql_n|
+        hex += "61 74 69 76 65 5f 70 61  73 73 77 6f 72 64 00   "  # |ative_password.|
         # 0x5f == 95 bytes, 0x5b = 91 payload
 
         res = m.check_response(bytes.fromhex(hex))
         self.assertTrue(res)
-
