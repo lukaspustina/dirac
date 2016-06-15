@@ -2,16 +2,16 @@
 
 ## Run Dirac
 
-`PYTHONPATH=modules cargo run -- -r markdown -o reports/clusterb.md examples/clusterb.yml`
+`dirac> RUST_BACKTRACE=1 PYTHONPATH=../check_modules cargo run -- ../examples/pdt.yml -r markdown -o ../reports/pdt-report.md`
 
 ## Run Tests
 
 ### Run All Module Tests
 
-`nosetests modules`
+`check_modules> nosetests modules`
 
 ### Run Specific Module Test
 
-`nosetests modules/ssh_tests.py`
+`check_modules> nosetests modules/ssh_tests.py`
 
 
