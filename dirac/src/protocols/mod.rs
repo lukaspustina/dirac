@@ -19,48 +19,40 @@ pub trait Protocol<'a, S, T, V> {
     fn send_challenge(self: &Self) -> Result<V, Error>;
 }
 
-pub struct TcpConnect<'a>(Challenge<'a, NoData>);
+macro_rules! create_protocol {
+    ($protocol_name:ident, $data_type:ty, $protocol_response_name: ident, $response_type:ty, $sel:ident, $sender: block) => (
+        pub struct $protocol_name<'a>(Challenge<'a, $data_type>);
 
-pub struct TcpConnectResponse(pub NoData);
+        pub struct $protocol_response_name(pub $response_type);
 
-impl<'a> Protocol<'a, TcpConnect<'a>, NoData, TcpConnectResponse> for TcpConnect<'a> {
-    fn new(host: &'a str, port: u16) -> TcpConnect {
-        TcpConnect(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
-    }
+        impl<'a> Protocol<'a, $protocol_name<'a>, $data_type, $protocol_response_name> for $protocol_name<'a> {
+            fn new(host: &'a str, port: u16) -> $protocol_name {
+                $protocol_name(Challenge {
+                    host: host,
+                    port: port,
+                    data: None,
+                })
+            }
 
-    fn set_data(self: &mut Self, _: NoData) {}
+            fn set_data(self: &mut Self, data: $data_type) {
+                    let $protocol_name(ref mut challenge) = *self;
+                    challenge.data = Some(data);
+            }
 
-    fn send_challenge(self: &Self) -> Result<TcpConnectResponse, Error> {
-        let TcpConnect(ref challenge) = *self;
-        let _ = try!(TcpStream::connect((challenge.host, challenge.port)));
+            fn send_challenge($sel: &Self) -> Result<$protocol_response_name, Error> $sender
 
-        Ok(TcpConnectResponse(()))
-    }
+        }
+    )
 }
 
-pub struct TcpRaw<'a>(Challenge<'a, Vec<u8>>);
+create_protocol!(TcpConnect, NoData, TcpConnectResponse, NoData, self, {
+    let TcpConnect(ref challenge) = *self;
+    let _ = try!(TcpStream::connect((challenge.host, challenge.port)));
 
-pub struct TcpRawResponse(pub Vec<u8>);
+    Ok(TcpConnectResponse(()))
+});
 
-impl<'a> Protocol<'a, TcpRaw<'a>, Vec<u8>, TcpRawResponse> for TcpRaw<'a> {
-    fn new(host: &'a str, port: u16) -> TcpRaw {
-        TcpRaw(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
-    }
-
-    fn set_data(self: &mut Self, data: Vec<u8>) {
-        let TcpRaw(ref mut challenge) = *self;
-        challenge.data = Some(data);
-    }
-
-    fn send_challenge(self: &Self) -> Result<TcpRawResponse, Error> {
+create_protocol!(TcpRaw, Vec<u8>, TcpRawResponse, Vec<u8>, self, {
         let TcpRaw(ref challenge) = *self;
         let bytes = if let Some(ref data) = challenge.data {
             data.as_slice()
@@ -72,40 +64,59 @@ impl<'a> Protocol<'a, TcpRaw<'a>, Vec<u8>, TcpRawResponse> for TcpRaw<'a> {
 
         Ok(TcpRawResponse(response_bytes))
     }
+);
+
+create_protocol!(TcpText, String, TcpTextResponse, String, self, {
+    let TcpText(ref challenge) = *self;
+    let bytes = if let Some(ref data) = challenge.data {
+        data.as_bytes()
+    } else {
+        let empty: &[u8] = &[0u8; 0];
+        empty
+    };
+    let response_bytes = try!(tcp_stream_send_recv(challenge.host, challenge.port, bytes));
+    let string = String::from_utf8_lossy(&response_bytes.as_slice()).to_string();
+
+    Ok(TcpTextResponse(string))
+});
+
+create_protocol!(UdpText, String, UdpTextResponse, String, self, {
+    let UdpText(ref challenge) = *self;
+    let bytes = if let Some(ref data) = challenge.data {
+        data.as_bytes()
+    } else {
+        let empty: &[u8] = &[0u8; 0];
+        empty
+    };
+    let response_bytes = try!(udp_datagram_send_recv(challenge.host, challenge.port, bytes));
+    let string = String::from_utf8_lossy(&response_bytes.as_slice()).to_string();
+
+    Ok(UdpTextResponse(string))
+});
+
+
+pub struct HttpResponse<T> {
+    pub response_code: u16,
+    pub headers: HashMap<String, String>,
+    pub body: T,
 }
 
-pub struct TcpText<'a>(Challenge<'a, String>);
+create_protocol!(TcpHttp, String, TcpHttpTextResponse, HttpResponse<String>, self, {
+        let TcpHttp(ref challenge) = *self;
+        let response_data = try!(http_send_recv("http", challenge));
 
-pub struct TcpTextResponse(pub String);
-
-impl<'a> Protocol<'a, TcpText<'a>, String, TcpTextResponse> for TcpText<'a> {
-    fn new(host: &'a str, port: u16) -> TcpText {
-        TcpText(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
+        Ok(TcpHttpTextResponse(response_data))
     }
+);
 
-    fn set_data(self: &mut Self, data: String) {
-        let TcpText(ref mut challenge) = *self;
-        challenge.data = Some(data);
+create_protocol!(TcpHttps, String, TcpHttpsTextResponse, HttpResponse<String>, self, {
+        let TcpHttps(ref challenge) = *self;
+        let response_data = try!(http_send_recv("https", challenge));
+
+        Ok(TcpHttpsTextResponse(response_data))
     }
+);
 
-    fn send_challenge(self: &Self) -> Result<TcpTextResponse, Error> {
-        let TcpText(ref challenge) = *self;
-        let bytes = if let Some(ref data) = challenge.data {
-            data.as_bytes()
-        } else {
-            let empty: &[u8] = &[0u8; 0];
-            empty
-        };
-        let response_bytes = try!(tcp_stream_send_recv(challenge.host, challenge.port, bytes));
-        let string = String::from_utf8_lossy(&response_bytes.as_slice()).to_string();
-
-        Ok(TcpTextResponse(string))
-    }
-}
 
 fn tcp_stream_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, Error> {
     let mut stream = try!(TcpStream::connect((host, port)));
@@ -127,43 +138,11 @@ fn tcp_stream_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, 
            rx_len);
 
     let v = From::from(&response_bytes[0..rx_len]);
+
     Ok(v)
 }
 
-pub struct UdpText<'a>(Challenge<'a, String>);
-
-pub struct UdpTextResponse(pub String);
-
-impl<'a> Protocol<'a, UdpText<'a>, String, UdpTextResponse> for UdpText<'a> {
-    fn new(host: &'a str, port: u16) -> UdpText {
-        UdpText(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
-    }
-
-    fn set_data(self: &mut Self, data: String) {
-        let UdpText(ref mut challenge) = *self;
-        challenge.data = Some(data);
-    }
-
-    fn send_challenge(self: &Self) -> Result<UdpTextResponse, Error> {
-        let UdpText(ref challenge) = *self;
-        let bytes = if let Some(ref data) = challenge.data {
-            data.as_bytes()
-        } else {
-            let empty: &[u8] = &[0u8; 0];
-            empty
-        };
-        let response_bytes = try!(udp_datagram_send_recv(challenge.host, challenge.port, bytes));
-        let string = String::from_utf8_lossy(&response_bytes.as_slice()).to_string();
-
-        Ok(UdpTextResponse(string))
-    }
-}
-
-pub fn udp_datagram_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, Error> {
+fn udp_datagram_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec<u8>, Error> {
     let socket = try!(UdpSocket::bind(("0.0.0.0", 18181)));
     let dur = Duration::new(1, 0);
     socket.set_read_timeout(Some(dur)).unwrap();
@@ -183,100 +162,34 @@ pub fn udp_datagram_send_recv(host: &str, port: u16, bytes: &[u8]) -> Result<Vec
            rx_len);
 
     let v = From::from(&rx_buf[0..rx_len]);
+
     Ok(v)
 }
 
+fn http_send_recv<'a>(url_scheme: &str,
+                      challenge: &Challenge<'a, String>)
+                      -> Result<HttpResponse<String>, Error> {
+    let mut client = Client::new();
 
-pub struct TcpHttp<'a>(Challenge<'a, String>);
+    let data = challenge.data.as_ref().unwrap();
+    let data_parts: Vec<&str> = data.split_whitespace().collect();
+    let url = format!("{}://{}:{}{}",
+                      url_scheme,
+                      challenge.host,
+                      challenge.port,
+                      data_parts[1]);
+    debug!("- {} request '{}'", url_scheme, url);
 
-pub struct HttpResponse<T> {
-    pub response_code: u16,
-    pub headers: HashMap<String, String>,
-    pub body: T,
-}
+    client.set_redirect_policy(RedirectPolicy::FollowNone);
+    // TODO: use verb instead of hardcoded get and handle hyper Errors
+    let res = client.get(&url).send().unwrap();
 
-pub struct TcpHttpTextResponse(pub HttpResponse<String>);
+    let headers = HashMap::new();
+    let response_data: HttpResponse<String> = HttpResponse {
+        response_code: res.status_raw().0,
+        headers: headers,
+        body: "<not yet implemented>".to_string(),
+    };
 
-impl<'a> Protocol<'a, TcpHttp<'a>, String, TcpHttpTextResponse> for TcpHttp<'a> {
-    fn new(host: &'a str, port: u16) -> TcpHttp {
-        TcpHttp(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
-    }
-
-    fn set_data(self: &mut Self, data: String) {
-        let TcpHttp(ref mut challenge) = *self;
-        challenge.data = Some(data);
-    }
-
-    fn send_challenge(self: &Self) -> Result<TcpHttpTextResponse, Error> {
-        let TcpHttp(ref challenge) = *self;
-        let mut client = Client::new();
-
-        let data = challenge.data.as_ref().unwrap();
-        let data_parts: Vec<&str> = data.split_whitespace().collect();
-        let url = format!("http://{}:{}{}",
-                          challenge.host,
-                          challenge.port,
-                          data_parts[1]);
-        debug!("- http request '{}'", url);
-
-        client.set_redirect_policy(RedirectPolicy::FollowNone);
-        // TODO: use verb instead of hardcoded get and handle hyper Errors
-        let res = client.get(&url).send().unwrap();
-
-        let headers = HashMap::new();
-        let response_data: HttpResponse<String> = HttpResponse {
-            response_code: res.status_raw().0,
-            headers: headers,
-            body: "<not yet implemented>".to_string(),
-        };
-        Ok(TcpHttpTextResponse(response_data))
-    }
-}
-
-pub struct TcpHttps<'a>(Challenge<'a, String>);
-
-pub struct TcpHttpsTextResponse(pub HttpResponse<String>);
-
-impl<'a> Protocol<'a, TcpHttps<'a>, String, TcpHttpsTextResponse> for TcpHttps<'a> {
-    fn new(host: &'a str, port: u16) -> TcpHttps {
-        TcpHttps(Challenge {
-            host: host,
-            port: port,
-            data: None,
-        })
-    }
-
-    fn set_data(self: &mut Self, data: String) {
-        let TcpHttps(ref mut challenge) = *self;
-        challenge.data = Some(data);
-    }
-
-    fn send_challenge(self: &Self) -> Result<TcpHttpsTextResponse, Error> {
-        let TcpHttps(ref challenge) = *self;
-        let mut client = Client::new();
-
-        let data = challenge.data.as_ref().unwrap();
-        let data_parts: Vec<&str> = data.split_whitespace().collect();
-        let url = format!("https://{}:{}{}",
-                          challenge.host,
-                          challenge.port,
-                          data_parts[1]);
-        debug!("- https request '{}'", url);
-
-        client.set_redirect_policy(RedirectPolicy::FollowNone);
-        // TODO: use verb instead of hardcoded get
-        let res = client.get(&url).send().unwrap();
-
-        let headers = HashMap::new();
-        let response_data: HttpResponse<String> = HttpResponse {
-            response_code: res.status_raw().0,
-            headers: headers,
-            body: "<not yet implemented>".to_string(),
-        };
-        Ok(TcpHttpsTextResponse(response_data))
-    }
+    Ok(response_data)
 }
