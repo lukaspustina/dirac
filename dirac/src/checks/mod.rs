@@ -27,14 +27,19 @@ pub struct CheckSuite {
 
 impl CheckSuite {
     pub fn read_from_file(filename: &str) -> Option<CheckSuite> {
+        let mut f = File::open(filename).unwrap();
+        let mut yaml_str = String::new();
+        let _ = f.read_to_string(&mut yaml_str);
+
+        CheckSuite::read_from_string(&yaml_str)
+    }
+
+    pub fn read_from_string(yaml_str: &str) -> Option<CheckSuite> {
         let key_inventory: Yaml = Yaml::from_str("inventory");
         let key_host = Yaml::from_str("hosts");
         let key_properties = Yaml::from_str("properties");
         let key_name = Yaml::from_str("name");
 
-        let mut f = File::open(filename).unwrap();
-        let mut yaml_str = String::new();
-        let _ = f.read_to_string(&mut yaml_str);
         let docs = YamlLoader::load_from_str(&yaml_str).unwrap();
 
     /*
