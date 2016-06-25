@@ -34,6 +34,11 @@ static CHECK_SUITE_YAML: &'static str = r##"
 "##;
 
 #[test]
+pub fn check_suite_yml_read_in_test() {
+    parse_check_suite(CHECK_SUITE_YAML);
+}
+
+#[test]
 pub fn check_suite_yml_inventory_test() {
     let check_suite = parse_check_suite(CHECK_SUITE_YAML);
     let inventory = &check_suite.inventory;
