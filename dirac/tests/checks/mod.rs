@@ -1,7 +1,6 @@
 use dirac::checks::*;
 
 static CHECK_SUITE_YAML: &'static str = r##"
-# vim: set ft=yaml:
 ---
 - inventory:
     all:
